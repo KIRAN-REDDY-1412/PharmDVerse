@@ -3,8 +3,8 @@ import { X, User, Camera, Eye, EyeOff, Save, ChevronDown, UserPlus } from 'lucid
 import { useDatabase } from '../../../context/DatabaseContext';
 import './AddPreceptorModal.css';
 
-const AddPreceptorModal = ({ isOpen, onClose }) => {
-  const { addUser } = useDatabase();
+const AddPreceptorModal = ({ isOpen, onClose, mode = 'add', initialData = null }) => {
+  const { addUser, updateUser } = useDatabase();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
@@ -24,6 +24,26 @@ const AddPreceptorModal = ({ isOpen, onClose }) => {
     confirmPassword: '',
     status: 'Active'
   });
+
+  React.useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      setFormData({
+        preceptorId: initialData.id || '',
+        fullName: initialData.name || initialData.fullName || '',
+        gender: initialData.gender || 'Male',
+        dateOfBirth: initialData.dateOfBirth || '',
+        qualification: initialData.qualification || 'Pharm.D',
+        designation: initialData.designation || 'Assistant Professor',
+        department: initialData.department || initialData.dept || 'Pharmacy Practice',
+        email: initialData.email || '',
+        mobileNumber: initialData.phone || initialData.mobileNumber || initialData.mobile || '',
+        password: '', // Leave empty for edit unless changing
+        confirmPassword: '',
+        status: initialData.status || 'Active'
+      });
+      setPhotoPreview(initialData.profilePhoto || null);
+    }
+  }, [mode, initialData, isOpen]);
 
   const handleAutoCapitalizeChange = (e) => {
     const { name, value } = e.target;
@@ -59,11 +79,19 @@ const AddPreceptorModal = ({ isOpen, onClose }) => {
 
   const handleSave = () => {
     setError('');
-    if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
+    if (!formData.fullName || !formData.email) {
       setError('Please fill out all required fields.');
       return;
     }
-    if (formData.password !== formData.confirmPassword) {
+    
+    if (mode === 'add') {
+      if (!formData.password || !formData.confirmPassword) {
+        setError('Password is required.');
+        return;
+      }
+    }
+    
+    if (formData.password && formData.password !== formData.confirmPassword) {
       setError('Passwords do not match.');
       return;
     }
@@ -82,10 +110,19 @@ const AddPreceptorModal = ({ isOpen, onClose }) => {
       qualification: formData.qualification,
       status: formData.status
     };
+    
+    if (mode === 'edit' && !newUser.password) {
+      delete newUser.password;
+    }
 
     try {
-      addUser(newUser);
-      alert('Preceptor added successfully.');
+      if (mode === 'edit') {
+        updateUser(initialData.id, newUser);
+        alert('Preceptor updated successfully.');
+      } else {
+        addUser(newUser);
+        alert('Preceptor added successfully.');
+      }
       onClose();
     } catch (err) {
       setError(err.message);
@@ -121,8 +158,8 @@ const AddPreceptorModal = ({ isOpen, onClose }) => {
           <div className="modal-title-group">
             <UserPlus size={32} className="modal-title-icon" />
             <div className="modal-title-text">
-              <h2>Add Preceptor</h2>
-              <p>Enter preceptor details to register</p>
+              <h2>{mode === 'edit' ? 'Edit Preceptor' : 'Add Preceptor'}</h2>
+              <p>{mode === 'edit' ? 'Update preceptor details' : 'Enter preceptor details to register'}</p>
             </div>
           </div>
           <button className="close-button" onClick={onClose}>
@@ -146,10 +183,11 @@ const AddPreceptorModal = ({ isOpen, onClose }) => {
                 <label>Preceptor ID <span className="required-asterisk">*</span></label>
                 <input 
                   type="text" 
-                  className="form-control" 
+                  className={`form-control ${mode === 'edit' ? 'read-only' : ''}`} 
                   name="preceptorId"
                   value={formData.preceptorId}
                   onChange={handleChange}
+                  readOnly={mode === 'edit'}
                 />
               </div>
 
@@ -282,7 +320,7 @@ const AddPreceptorModal = ({ isOpen, onClose }) => {
               </div>
 
               <div className="form-group">
-                <label>Password <span className="required-asterisk">*</span></label>
+                <label>Password {mode === 'add' && <span className="required-asterisk">*</span>} {mode === 'edit' && <span className="field-hint" style={{marginLeft: 'auto'}}>(Leave blank to keep)</span>}</label>
                 <div className="form-control-wrapper">
                   <input 
                     type={showPassword ? "text" : "password"} 
@@ -290,6 +328,7 @@ const AddPreceptorModal = ({ isOpen, onClose }) => {
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
+                    placeholder={mode === 'edit' ? '••••••••' : ''}
                   />
                   <button 
                     type="button" 
@@ -302,7 +341,7 @@ const AddPreceptorModal = ({ isOpen, onClose }) => {
               </div>
 
               <div className="form-group">
-                <label>Confirm Password <span className="required-asterisk">*</span></label>
+                <label>Confirm Password {mode === 'add' && <span className="required-asterisk">*</span>}</label>
                 <div className="form-control-wrapper">
                   <input 
                     type={showConfirmPassword ? "text" : "password"} 
@@ -310,6 +349,7 @@ const AddPreceptorModal = ({ isOpen, onClose }) => {
                     name="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={handleChange}
+                    placeholder={mode === 'edit' ? '••••••••' : ''}
                   />
                   <button 
                     type="button" 

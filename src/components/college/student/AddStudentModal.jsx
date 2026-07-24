@@ -4,8 +4,8 @@ import { useDatabase } from '../../../context/DatabaseContext';
 import '../preceptor/AddPreceptorModal.css';
 import './AddStudentModal.css';
 
-const AddStudentModal = ({ isOpen, onClose }) => {
-  const { addUser } = useDatabase();
+const AddStudentModal = ({ isOpen, onClose, mode = 'add', initialData = null }) => {
+  const { addUser, updateUser } = useDatabase();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState({});
@@ -32,6 +32,32 @@ const AddStudentModal = ({ isOpen, onClose }) => {
     confirmPassword: '',
     status: true
   });
+
+  React.useEffect(() => {
+    if (mode === 'edit' && initialData) {
+      setFormData({
+        rollNumber: initialData.id || '',
+        fullName: initialData.name || '',
+        gender: initialData.gender || 'Male',
+        dateOfBirth: initialData.dateOfBirth || '',
+        bloodGroup: initialData.bloodGroup || '',
+        aadhaarNumber: initialData.aadhaarNumber || '',
+        course: initialData.course || initialData.program || 'Pharm.D',
+        batch: initialData.batch || 'Y26',
+        year: initialData.year || 'I Year',
+        academicYear: initialData.academicYear || '2026-2027',
+        email: initialData.email || '',
+        mobileNumber: initialData.phone || initialData.mobile || '',
+        parentName: initialData.parentName || '',
+        parentMobile: initialData.parentMobile || '',
+        address: initialData.address || '',
+        password: '', // Leave empty for edit unless user wants to change
+        confirmPassword: '',
+        status: initialData.status === 'Active'
+      });
+      setPhotoPreview(initialData.profilePhoto || null);
+    }
+  }, [mode, initialData, isOpen]);
 
   const handleAutoCapitalizeChange = (e) => {
     const { name, value } = e.target;
@@ -75,8 +101,12 @@ const AddStudentModal = ({ isOpen, onClose }) => {
     if (!formData.mobileNumber.trim()) newErrors.mobileNumber = 'Mobile Number is required';
     if (!formData.parentName.trim()) newErrors.parentName = 'Parent/Guardian Name is required';
     if (!formData.parentMobile.trim()) newErrors.parentMobile = 'Parent/Guardian Mobile is required';
-    if (!formData.password) newErrors.password = 'Password is required';
-    if (!formData.confirmPassword) newErrors.confirmPassword = 'Confirm Password is required';
+    
+    if (mode === 'add') {
+      if (!formData.password) newErrors.password = 'Password is required';
+      if (!formData.confirmPassword) newErrors.confirmPassword = 'Confirm Password is required';
+    }
+    
     if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
@@ -98,15 +128,26 @@ const AddStudentModal = ({ isOpen, onClose }) => {
         dateOfBirth: formData.dateOfBirth,
         course: formData.course,
         batch: formData.batch,
+        year: formData.year,
         academicYear: formData.academicYear,
         address: formData.address,
         status: formData.status ? 'Active' : 'Inactive',
         profilePhoto: photoPreview
       };
       
+      // If editing and no new password provided, do not overwrite the old one
+      if (mode === 'edit' && !newUser.password) {
+        delete newUser.password;
+      }
+      
       try {
-        addUser(newUser);
-        alert('Student added successfully.');
+        if (mode === 'edit') {
+          updateUser(initialData.id, newUser);
+          alert('Student updated successfully.');
+        } else {
+          addUser(newUser);
+          alert('Student added successfully.');
+        }
         onClose();
       } catch (err) {
         setSubmitError(err.message);
@@ -150,8 +191,8 @@ const AddStudentModal = ({ isOpen, onClose }) => {
           <div className="modal-title-group">
             <GraduationCap size={32} className="modal-title-icon" />
             <div className="modal-title-text">
-              <h2>Add Student</h2>
-              <p>Enter student details to register</p>
+              <h2>{mode === 'edit' ? 'Edit Student' : 'Add Student'}</h2>
+              <p>{mode === 'edit' ? 'Update student details' : 'Enter student details to register'}</p>
             </div>
           </div>
           <button className="close-button" onClick={onClose}>
@@ -178,7 +219,7 @@ const AddStudentModal = ({ isOpen, onClose }) => {
               <div className="section-grid">
                 <div className="form-group">
                   <label>Roll Number <span className="required-asterisk">*</span></label>
-                  <input type="text" className={`form-control ${errors.rollNumber ? 'error' : ''}`} name="rollNumber" placeholder="e.g. Y26PHD0301" value={formData.rollNumber} onChange={handleChange} />
+                  <input type="text" className={`form-control ${errors.rollNumber ? 'error' : ''} ${mode === 'edit' ? 'read-only' : ''}`} name="rollNumber" placeholder="e.g. Y26PHD0301" value={formData.rollNumber} onChange={handleChange} readOnly={mode === 'edit'} />
                   {errors.rollNumber && <span className="field-error">{errors.rollNumber}</span>}
                 </div>
 
@@ -322,7 +363,7 @@ const AddStudentModal = ({ isOpen, onClose }) => {
             {/* ── Login Credentials ── */}
             <div className="form-section">
               <div className="section-heading">
-                <span className="section-icon">🔐</span> Login Credentials
+                <span className="section-icon">🔐</span> Login Credentials {mode === 'edit' && '(Leave blank to keep current)'}
               </div>
               <div className="section-grid">
                 <div className="form-group full-width">
@@ -332,9 +373,9 @@ const AddStudentModal = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Password <span className="required-asterisk">*</span></label>
+                  <label>Password {mode === 'add' && <span className="required-asterisk">*</span>}</label>
                   <div className="form-control-wrapper">
-                    <input type={showPassword ? "text" : "password"} className={`form-control ${errors.password ? 'error' : ''}`} name="password" value={formData.password} onChange={handleChange} />
+                    <input type={showPassword ? "text" : "password"} className={`form-control ${errors.password ? 'error' : ''}`} name="password" value={formData.password} onChange={handleChange} placeholder={mode === 'edit' ? '••••••••' : ''} />
                     <button type="button" className="password-toggle" onClick={() => setShowPassword(!showPassword)}>
                       {showPassword ? <Eye size={18} /> : <EyeOff size={18} />}
                     </button>
@@ -343,9 +384,9 @@ const AddStudentModal = ({ isOpen, onClose }) => {
                 </div>
 
                 <div className="form-group">
-                  <label>Confirm Password <span className="required-asterisk">*</span></label>
+                  <label>Confirm Password {mode === 'add' && <span className="required-asterisk">*</span>}</label>
                   <div className="form-control-wrapper">
-                    <input type={showConfirmPassword ? "text" : "password"} className={`form-control ${errors.confirmPassword ? 'error' : ''}`} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} />
+                    <input type={showConfirmPassword ? "text" : "password"} className={`form-control ${errors.confirmPassword ? 'error' : ''}`} name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder={mode === 'edit' ? '••••••••' : ''} />
                     <button type="button" className="password-toggle" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
                       {showConfirmPassword ? <Eye size={18} /> : <EyeOff size={18} />}
                     </button>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  Search, Filter, Download, Eye, Pencil, Trash2, 
+  Plus, Search, Filter, Download, Eye, Pencil, Trash2, 
   ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight, ChevronDown
 } from 'lucide-react';
 import CollegeAdminLayout from '../../components/college/CollegeAdminLayout';
@@ -14,10 +14,11 @@ import { useDatabase } from '../../context/DatabaseContext';
 const StudentList = () => {
   const { users } = useDatabase();
   const students = users.filter(u => u.role === 'student');
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [editRecord, setEditRecord] = useState(null);
 
   const handleView = (row) => {
     setSelectedRecord(row);
@@ -25,8 +26,8 @@ const StudentList = () => {
   };
 
   const handleEdit = (row) => {
-    setSelectedRecord(row);
-    setIsEditModalOpen(true);
+    setEditRecord(row);
+    setIsAddModalOpen(true);
   };
 
   const handleDelete = (row) => {
@@ -57,6 +58,11 @@ const StudentList = () => {
               <span className="breadcrumb-separator">&gt;</span>
               <span>Student List</span>
             </div>
+          </div>
+          <div className="header-right">
+            <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>
+              <Plus size={18} /> Add Student
+            </button>
           </div>
         </div>
 
@@ -113,7 +119,6 @@ const StudentList = () => {
                 <th>Full Name</th>
                 <th>Program</th>
                 <th>Year</th>
-                <th>Department</th>
                 <th>Email</th>
                 <th>Mobile Number</th>
                 <th>Status</th>
@@ -125,11 +130,10 @@ const StudentList = () => {
                 <tr key={row.id}>
                   <td>{row.id}</td>
                   <td>{row.name || row.fullName}</td>
-                  <td>{row.program}</td>
+                  <td>{row.course || row.program}</td>
                   <td>{row.year}</td>
-                  <td>{row.department || row.dept}</td>
                   <td>{row.email}</td>
-                  <td>{row.mobile || row.mobileNumber}</td>
+                  <td>{row.phone || row.mobile || row.mobileNumber}</td>
                   <td>
                     <span className={`status-pill ${row.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
                       {row.status}
@@ -190,11 +194,10 @@ const StudentList = () => {
         fields={[
           { label: 'Student ID', value: selectedRecord?.id },
           { label: 'Full Name', value: selectedRecord?.name },
-          { label: 'Program', value: selectedRecord?.program },
+          { label: 'Program', value: selectedRecord?.course || selectedRecord?.program },
           { label: 'Year', value: selectedRecord?.year },
-          { label: 'Department', value: selectedRecord?.dept },
           { label: 'Email', value: selectedRecord?.email },
-          { label: 'Mobile Number', value: selectedRecord?.mobile },
+          { label: 'Mobile Number', value: selectedRecord?.phone || selectedRecord?.mobile || selectedRecord?.mobileNumber },
           { label: 'Status', value: selectedRecord?.status, type: 'status' },
         ]}
         title="Student Details"
@@ -202,10 +205,13 @@ const StudentList = () => {
       />
 
       <AddStudentModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        mode="edit"
-        initialData={selectedRecord}
+        isOpen={isAddModalOpen}
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditRecord(null);
+        }}
+        mode={editRecord ? 'edit' : 'add'}
+        initialData={editRecord}
       />
 
       <ConfirmDeleteModal

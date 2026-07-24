@@ -138,7 +138,7 @@ const PreceptorList = () => {
                   <td>{row.department || row.dept}</td>
                   <td>{row.designation}</td>
                   <td>{row.email}</td>
-                  <td>{row.mobile || row.mobileNumber}</td>
+                  <td>{row.phone || row.mobile || row.mobileNumber}</td>
                   <td>
                     <span className={`status-pill ${row.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
                       {row.status}
@@ -197,7 +197,12 @@ const PreceptorList = () => {
 
       <AddPreceptorModal 
         isOpen={isAddModalOpen} 
-        onClose={() => setIsAddModalOpen(false)} 
+        onClose={() => {
+          setIsAddModalOpen(false);
+          setEditRecord(null);
+        }}
+        mode={editRecord ? 'edit' : 'add'}
+        initialData={editRecord}
       />
 
       <ViewRecordModal
