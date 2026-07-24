@@ -18,22 +18,13 @@ import CollegeAdminLayout from '../../components/college/CollegeAdminLayout';
 import AddPreceptorModal from '../../components/college/preceptor/AddPreceptorModal';
 import ViewRecordModal from '../../components/college/shared/ViewRecordModal';
 import ConfirmDeleteModal from '../../components/college/shared/ConfirmDeleteModal';
+import { useDatabase } from '../../context/DatabaseContext';
 import './PreceptorList.css';
 
-const MOCK_DATA = [
-  { id: 'PRE001', name: 'Dr. Ramesh Patel', dept: 'Pharmacy Practice', designation: 'Associate Professor', email: 'ramesh.patel@pharmdverse.edu.in', mobile: '9876543210', status: 'Active' },
-  { id: 'PRE002', name: 'Dr. Sunita Sharma', dept: 'Pharmacology', designation: 'Professor', email: 'sunita.sharma@pharmdverse.edu.in', mobile: '9876543211', status: 'Active' },
-  { id: 'PRE003', name: 'Dr. Arjun Verma', dept: 'Pharmaceutics', designation: 'Assistant Professor', email: 'arjun.verma@pharmdverse.edu.in', mobile: '9876543212', status: 'Active' },
-  { id: 'PRE004', name: 'Dr. Neha Singh', dept: 'Pharmacognosy', designation: 'Associate Professor', email: 'neha.singh@pharmdverse.edu.in', mobile: '9876543213', status: 'Inactive' },
-  { id: 'PRE005', name: 'Dr. K. Mahesh', dept: 'Pharmacy Practice', designation: 'Assistant Professor', email: 'mahesh.k@pharmdverse.edu.in', mobile: '9876543214', status: 'Active' },
-  { id: 'PRE006', name: 'Dr. Priya Nair', dept: 'Pharmacology', designation: 'Assistant Professor', email: 'priya.nair@pharmdverse.edu.in', mobile: '9876543215', status: 'Active' },
-  { id: 'PRE007', name: 'Dr. Vikas Joshi', dept: 'Pharmaceutics', designation: 'Associate Professor', email: 'vikas.joshi@pharmdverse.edu.in', mobile: '9876543216', status: 'Active' },
-  { id: 'PRE008', name: 'Dr. Meena Reddy', dept: 'Pharmacy Practice', designation: 'Professor', email: 'meena.reddy@pharmdverse.edu.in', mobile: '9876543217', status: 'Active' },
-];
-
 const PreceptorList = () => {
+  const { users } = useDatabase();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [preceptors, setPreceptors] = useState(MOCK_DATA);
+  const preceptors = users.filter(u => u.role === 'preceptor');
 
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -47,7 +38,7 @@ const PreceptorList = () => {
 
   const confirmDelete = () => {
     if (selectedRecord) {
-      setPreceptors(preceptors.filter(p => p.id !== selectedRecord.id));
+      alert(`Delete not fully implemented in UI for ${selectedRecord.id}`);
       setIsDeleteModalOpen(false);
       setSelectedRecord(null);
     }
@@ -142,14 +133,14 @@ const PreceptorList = () => {
             <tbody>
               {preceptors.map((row) => (
                 <tr key={row.id}>
-                  <td><Link to="#" className="id-link">{row.id}</Link></td>
-                  <td>{row.name}</td>
-                  <td>{row.dept}</td>
+                  <td>{row.id}</td>
+                  <td>{row.name || row.fullName}</td>
+                  <td>{row.department || row.dept}</td>
                   <td>{row.designation}</td>
                   <td>{row.email}</td>
-                  <td>{row.mobile}</td>
+                  <td>{row.mobile || row.mobileNumber}</td>
                   <td>
-                    <span className={`status-pill status-${row.status.toLowerCase()}`}>
+                    <span className={`status-pill ${row.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
                       {row.status}
                     </span>
                   </td>

@@ -9,20 +9,11 @@ import '../college/PreceptorList.css';
 import AddStudentModal from '../../components/college/student/AddStudentModal';
 import ViewRecordModal from '../../components/college/shared/ViewRecordModal';
 import ConfirmDeleteModal from '../../components/college/shared/ConfirmDeleteModal';
-
-const MOCK_STUDENTS = [
-  { id: 'STU001', name: 'Arun Kumar', program: 'Pharm.D', year: '3rd Year', dept: 'Pharmacy Practice', email: 'arun.kumar@pharmdverse.edu.in', mobile: '9876543301', status: 'Active' },
-  { id: 'STU002', name: 'Priya Sharma', program: 'Pharm.D', year: '4th Year', dept: 'Pharmacology', email: 'priya.sharma@pharmdverse.edu.in', mobile: '9876543302', status: 'Active' },
-  { id: 'STU003', name: 'Rahul Verma', program: 'M.Pharm', year: '1st Year', dept: 'Pharmacy Practice', email: 'rahul.verma@pharmdverse.edu.in', mobile: '9876543303', status: 'Active' },
-  { id: 'STU004', name: 'Sneha Patel', program: 'Pharm.D', year: '5th Year', dept: 'Pharmacology', email: 'sneha.patel@pharmdverse.edu.in', mobile: '9876543304', status: 'Inactive' },
-  { id: 'STU005', name: 'Vikram Singh', program: 'Pharm.D', year: '2nd Year', dept: 'Pharmacy Practice', email: 'vikram.singh@pharmdverse.edu.in', mobile: '9876543305', status: 'Active' },
-  { id: 'STU006', name: 'Meera Nair', program: 'M.Pharm', year: '2nd Year', dept: 'Pharmacology', email: 'meera.nair@pharmdverse.edu.in', mobile: '9876543306', status: 'Active' },
-  { id: 'STU007', name: 'Karthik Reddy', program: 'Pharm.D', year: '3rd Year', dept: 'Pharmacy Practice', email: 'karthik.reddy@pharmdverse.edu.in', mobile: '9876543307', status: 'Active' },
-  { id: 'STU008', name: 'Ananya Gupta', program: 'Pharm.D', year: '6th Year', dept: 'Pharmacy Practice', email: 'ananya.gupta@pharmdverse.edu.in', mobile: '9876543308', status: 'Active' },
-];
+import { useDatabase } from '../../context/DatabaseContext';
 
 const StudentList = () => {
-  const [students, setStudents] = useState(MOCK_STUDENTS);
+  const { users } = useDatabase();
+  const students = users.filter(u => u.role === 'student');
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -45,7 +36,7 @@ const StudentList = () => {
 
   const confirmDelete = () => {
     if (selectedRecord) {
-      setStudents(students.filter(s => s.id !== selectedRecord.id));
+      alert(`Delete not fully implemented in UI for ${selectedRecord.id}`);
     }
     setIsDeleteModalOpen(false);
     setSelectedRecord(null);
@@ -132,15 +123,15 @@ const StudentList = () => {
             <tbody>
               {students.map((row) => (
                 <tr key={row.id}>
-                  <td><Link to="#" className="id-link">{row.id}</Link></td>
-                  <td>{row.name}</td>
+                  <td>{row.id}</td>
+                  <td>{row.name || row.fullName}</td>
                   <td>{row.program}</td>
                   <td>{row.year}</td>
-                  <td>{row.dept}</td>
+                  <td>{row.department || row.dept}</td>
                   <td>{row.email}</td>
-                  <td>{row.mobile}</td>
+                  <td>{row.mobile || row.mobileNumber}</td>
                   <td>
-                    <span className={`status-pill status-${row.status.toLowerCase()}`}>
+                    <span className={`status-pill ${row.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
                       {row.status}
                     </span>
                   </td>
