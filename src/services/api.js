@@ -1,18 +1,31 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjc2NreG12aGRua3FudGd4YXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNTczODYsImV4cCI6MjEwMDczMzM4Nn0.yuJ0R4wcwa5tkSQ6KUhVHPnRfB3Y2d1Y2coCJbVAfzM';
+const getApiBaseUrl = () => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  return 'http://localhost:5000/api/v1';
+};
+
+const getSupabaseAnonKey = () => {
+  if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    return import.meta.env.VITE_SUPABASE_ANON_KEY;
+  }
+  return 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjc2NreG12aGRua3FudGd4YXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNTczODYsImV4cCI6MjEwMDczMzM4Nn0.yuJ0R4wcwa5tkSQ6KUhVHPnRfB3Y2d1Y2coCJbVAfzM';
+};
 
 class ApiService {
   static getAuthHeaders() {
-    const token = localStorage.getItem('erp_token') || sessionStorage.getItem('erp_token');
+    const token = typeof localStorage !== 'undefined' ? (localStorage.getItem('erp_token') || sessionStorage.getItem('erp_token')) : null;
+    const anonKey = getSupabaseAnonKey();
     return {
       'Content-Type': 'application/json',
-      'apikey': SUPABASE_ANON_KEY,
-      ...(token ? { Authorization: `Bearer ${token}` } : { Authorization: `Bearer ${SUPABASE_ANON_KEY}` })
+      'apikey': anonKey,
+      ...(token ? { Authorization: `Bearer ${token}` } : { Authorization: `Bearer ${anonKey}` })
     };
   }
 
   static async request(endpoint, options = {}) {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const baseUrl = getApiBaseUrl();
+    const url = `${baseUrl}${endpoint}`;
     const headers = { ...this.getAuthHeaders(), ...options.headers };
 
     try {
@@ -23,7 +36,7 @@ class ApiService {
       }
       return await response.json();
     } catch (error) {
-      console.warn(`[API WARNING] Endpoint ${endpoint} unreachable or error: ${error.message}. Falling back to context handler.`);
+      console.warn(`[API WARNING] Endpoint ${endpoint} unreachable: ${error.message}. Falling back to client state.`);
       throw error;
     }
   }
