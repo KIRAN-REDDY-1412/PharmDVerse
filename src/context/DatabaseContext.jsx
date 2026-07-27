@@ -1,10 +1,10 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   INITIAL_USERS, INITIAL_CASES, INITIAL_NOTIFICATIONS, INITIAL_ACADEMIC_YEARS, 
   INITIAL_PROMOTION_LOGS, INITIAL_COLLEGES, INITIAL_REGISTRATION_REQUESTS, 
   INITIAL_SUBSCRIPTIONS, INITIAL_ROLE_PERMISSIONS, INITIAL_RELEASES, INITIAL_PLATFORM_SETTINGS 
 } from '../data/MockDatabase';
 import { useAuth } from './AuthContext';
+import ApiService from '../services/api';
 
 const DatabaseContext = createContext();
 
@@ -137,6 +137,30 @@ export const DatabaseProvider = ({ children }) => {
 
   // Sandbox testing mode simulation state
   const [testingSession, setTestingSession] = useState(null); // { role: 'admin'|'preceptor'|'student', collegeId: 'COL-001' }
+
+  // Initial PostgreSQL REST API Fetch & Synchronization
+  useEffect(() => {
+    const syncBackendData = async () => {
+      try {
+        const [colsRes, usersRes, casesRes, settingsRes, backupsRes] = await Promise.allSettled([
+          ApiService.getColleges(),
+          ApiService.getUsers(),
+          ApiService.getCases(),
+          ApiService.getPlatformSettings(),
+          ApiService.getBackups()
+        ]);
+
+        if (colsRes.status === 'fulfilled' && colsRes.value.data) setColleges(colsRes.value.data);
+        if (usersRes.status === 'fulfilled' && usersRes.value.data) setUsers(usersRes.value.data);
+        if (casesRes.status === 'fulfilled' && casesRes.value.data) setCases(casesRes.value.data);
+        if (settingsRes.status === 'fulfilled' && settingsRes.value.data) setPlatformSettings(settingsRes.value.data);
+        if (backupsRes.status === 'fulfilled' && backupsRes.value.data) setBackups(backupsRes.value.data);
+      } catch (err) {
+        console.warn('Backend sync warning:', err.message);
+      }
+    };
+    syncBackendData();
+  }, []);
 
   // Persist to localStorage on change
   useEffect(() => {
@@ -356,6 +380,7 @@ export const DatabaseProvider = ({ children }) => {
         history: [{ date: new Date().toISOString(), action: 'Submitted by Student', user: currentUser.name }]
       };
       setCases(prev => [newSubmitted, ...prev]);
+      ApiService.createCase(newSubmitted).catch(err => console.warn('API sync warning for createCase:', err.message));
       
       setTimeout(() => {
         transitionCaseStatus(newSubmitted.id, 'Assigned to Preceptor');
@@ -607,7 +632,7 @@ export const DatabaseProvider = ({ children }) => {
 
   // 7. Add New User (Admin Action)
   const addUser = (newUser) => {
-    if (currentUser?.role !== 'admin') {
+    if (currentUser?.role !== 'admin' && currentUser?.role !== 'superadmin') {
       console.error('Unauthorized: Only admins can add users.');
       return;
     }
@@ -616,6 +641,7 @@ export const DatabaseProvider = ({ children }) => {
       throw new Error(`User with ID ${newUser.id} or Email ${newUser.email} already exists.`);
     }
     setUsers(prev => [newUser, ...prev]);
+    ApiService.createUser(newUser).catch(err => console.warn('API sync warning for addUser:', err.message));
   };
 
   // 8. Delete User (Admin Action)
