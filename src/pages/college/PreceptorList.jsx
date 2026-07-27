@@ -10,6 +10,7 @@ import AddPreceptorModal from '../../components/college/preceptor/AddPreceptorMo
 import ViewPreceptorModal from '../../components/college/preceptor/ViewPreceptorModal';
 import ResetPasswordModal from '../../components/college/preceptor/ResetPreceptorPasswordModal';
 import { useDatabase } from '../../context/DatabaseContext';
+import { exportToExcel, exportToPDF } from '../../utils/ExportEngine';
 import './PreceptorList.css';
 
 const PreceptorList = () => {
@@ -281,9 +282,40 @@ const PreceptorList = () => {
             </button>
           </div>
           
-          <button className="btn-export" onClick={() => window.print()}>
-            <Download size={16} /> Export
-          </button>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button 
+              className="btn-export" 
+              onClick={() => {
+                const cols = [
+                  { label: 'Preceptor ID', key: 'id' },
+                  { label: 'Name', key: 'name' },
+                  { label: 'Email', key: 'email' },
+                  { label: 'Department', key: 'department' },
+                  { label: 'Designation', key: 'designation' },
+                  { label: 'Status', key: 'status' }
+                ];
+                exportToExcel({ title: 'Preceptor List Report', collegeName: 'PharmDVerse ERP', logoText: 'PDV', generatedBy: 'College Admin', academicYear: '2026-2027', columns: cols, data: filteredData, filename: 'Preceptor_List' });
+              }}
+            >
+              <Download size={14} /> Excel
+            </button>
+            <button 
+              className="btn-export" 
+              onClick={() => {
+                const cols = [
+                  { label: 'Preceptor ID', key: 'id' },
+                  { label: 'Name', key: 'name' },
+                  { label: 'Email', key: 'email' },
+                  { label: 'Department', key: 'department' },
+                  { label: 'Designation', key: 'designation' },
+                  { label: 'Status', key: 'status' }
+                ];
+                exportToPDF({ title: 'Preceptor List Report', collegeName: 'PharmDVerse ERP', logoText: 'PDV', generatedBy: 'College Admin', academicYear: '2026-2027', columns: cols, data: filteredData, filename: 'Preceptor_List' });
+              }}
+            >
+              <FileText size={14} /> PDF
+            </button>
+          </div>
         </div>
 
         {/* Advanced Filters Tray */}

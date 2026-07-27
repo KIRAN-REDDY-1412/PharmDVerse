@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import RegisterCollegePage from './pages/RegisterCollegePage';
+import NotFoundPage from './pages/NotFoundPage';
 import CollegePortal from './pages/college/CollegePortal';
 import CollegeLoginPage from './pages/college/CollegeLoginPage';
 import PreceptorLoginPage from './pages/college/PreceptorLoginPage';
@@ -259,6 +260,7 @@ function App() {
               <Route path="/student/new-case/pharmacist-intervention" element={<PharmacistInterventionForm />} />
               <Route path="/student/new-case/adr-reporting" element={<ADRForm />} />
               <Route path="/:slug" element={<CollegeLandingPage />} />
+              <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Router>
         </ThemeProvider>

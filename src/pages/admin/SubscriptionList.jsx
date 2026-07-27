@@ -1,68 +1,29 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AdminLayout from '../../components/admin/AdminLayout';
+import { useDatabase } from '../../context/DatabaseContext';
+import { exportToExcel, exportToPDF, exportToCSV } from '../../utils/ExportEngine';
 import { 
   Search, Filter, Plus, MoreVertical, 
   CheckCircle, AlertTriangle, Activity, 
-  Users, Shield, Calendar, Download, Eye, Edit, Key, FileText
+  Users, Shield, Calendar, Download, Eye, Edit, Key, FileText, ChevronLeft, ChevronRight,
+  ArrowUpDown
 } from 'lucide-react';
 import './SubscriptionList.css';
 
-const MOCK_DATA = [
-  {
-    id: 'SUB-2024-001',
-    college: 'University of Texas Pharmacy',
-    plan: 'Enterprise',
-    license: 'LIC-TX-9921',
-    status: 'Active',
-    start: '2024-01-15',
-    end: '2027-01-15',
-    daysRemaining: 902,
-    students: { current: 1250, max: 'Unlimited' },
-    preceptors: { current: 120, max: 'Unlimited' },
-    features: { ai: true, reports: true, library: true }
-  },
-  {
-    id: 'SUB-2024-045',
-    college: 'Boston Healthcare College',
-    plan: 'Professional',
-    license: 'LIC-MA-8832',
-    status: 'Expiring Soon',
-    start: '2023-11-01',
-    end: '2026-11-01',
-    daysRemaining: 96,
-    students: { current: 850, max: 2000 },
-    preceptors: { current: 45, max: 100 },
-    features: { ai: true, reports: true, library: false }
-  },
-  {
-    id: 'SUB-2024-088',
-    college: 'Midwest Pharmacy Academy',
-    plan: 'Basic',
-    license: 'LIC-OH-1102',
-    status: 'Expired',
-    start: '2023-05-15',
-    end: '2026-05-15',
-    daysRemaining: 0,
-    students: { current: 920, max: 1000 },
-    preceptors: { current: 30, max: 50 },
-    features: { ai: false, reports: true, library: false }
-  }
-];
-
 const getStatusBadge = (status) => {
-  switch(status) {
-    case 'Active': return <span className="status-badge success"><CheckCircle size={14} /> Active</span>;
-    case 'Expired': return <span className="status-badge danger"><AlertTriangle size={14} /> Expired</span>;
-    case 'Expiring Soon': return <span className="status-badge warning"><Activity size={14} /> Expiring Soon</span>;
-    default: return <span className="status-badge">{status}</span>;
-  }
+  const s = (status || '').toLowerCase();
+  if (s.includes('active')) return <span className="status-badge success"><CheckCircle size={14} /> Active</span>;
+  if (s.includes('expired')) return <span className="status-badge danger"><AlertTriangle size={14} /> Expired</span>;
+  if (s.includes('pending') || s.includes('soon')) return <span className="status-badge warning"><Activity size={14} /> {status}</span>;
+  return <span className="status-badge success"><CheckCircle size={14} /> Active</span>;
 };
 
 const getPlanPill = (plan) => {
   switch(plan) {
     case 'Enterprise': return <span className="plan-pill purple">{plan}</span>;
     case 'Professional': return <span className="plan-pill blue">{plan}</span>;
+    case 'Standard': 
     case 'Basic': return <span className="plan-pill slate">{plan}</span>;
     default: return <span className="plan-pill green">{plan}</span>;
   }
@@ -70,7 +31,77 @@ const getPlanPill = (plan) => {
 
 const SubscriptionList = () => {
   const navigate = useNavigate();
+  const { subscriptions, colleges } = useDatabase();
+  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [planFilter, setPlanFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [sortField, setSortField] = useState('collegeName');
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [actionMenuOpen, setActionMenuOpen] = useState(null);
+
+  const allSubscriptions = subscriptions || [];
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const filtered = allSubscriptions.filter(sub => {
+    const colName = sub.collegeName || (colleges.find(c => c.id === sub.collegeId)?.name || '');
+    const matchesSearch = (
+      colName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sub.id || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (sub.invoiceReference || '').toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const matchesPlan = !planFilter || (sub.plan || '').toLowerCase() === planFilter.toLowerCase();
+    const matchesStatus = !statusFilter || (sub.status || '').toLowerCase() === statusFilter.toLowerCase();
+
+    return matchesSearch && matchesPlan && matchesStatus;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    let valA = a[sortField] || '';
+    let valB = b[sortField] || '';
+    if (typeof valA === 'string') valA = valA.toLowerCase();
+    if (typeof valB === 'string') valB = valB.toLowerCase();
+
+    if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+    if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalPages = Math.ceil(sorted.length / pageSize) || 1;
+  const paginated = sorted.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const handleExport = (format) => {
+    const cols = [
+      { label: 'Sub ID', key: 'id' },
+      { label: 'College', key: 'collegeName' },
+      { label: 'Plan', key: 'plan' },
+      { label: 'Status', key: 'status' },
+      { label: 'Start Date', key: 'startDate' },
+      { label: 'Expiry Date', key: 'expiryDate' },
+      { label: 'Amount', key: 'amount' }
+    ];
+
+    if (format === 'excel') {
+      exportToExcel({ title: 'Subscription Master List', collegeName: 'PharmDVerse ERP Platform', logoText: 'PDV', generatedBy: 'Super Admin', academicYear: '2026-2027', columns: cols, data: sorted, filename: 'Subscriptions_List' });
+    } else if (format === 'pdf') {
+      exportToPDF({ title: 'Subscription Master List', collegeName: 'PharmDVerse ERP Platform', logoText: 'PDV', generatedBy: 'Super Admin', academicYear: '2026-2027', columns: cols, data: sorted, filename: 'Subscriptions_List' });
+    } else {
+      exportToCSV({ title: 'Subscription Master List', collegeName: 'PharmDVerse ERP Platform', logoText: 'PDV', generatedBy: 'Super Admin', academicYear: '2026-2027', columns: cols, data: sorted, filename: 'Subscriptions_List' });
+    }
+  };
 
   return (
     <AdminLayout>
@@ -81,96 +112,139 @@ const SubscriptionList = () => {
             <h1 className="sub-list-title">Subscriptions Master List</h1>
             <p className="sub-list-subtitle">Manage all college subscriptions, licenses, and renewals.</p>
           </div>
-          <div style={{ display: 'flex', gap: '12px' }}>
-            <button className="btn btn-secondary"><Download size={18} /> Export List</button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="btn btn-secondary" onClick={() => handleExport('excel')}><Download size={16} /> Excel</button>
+            <button className="btn btn-secondary" onClick={() => handleExport('pdf')}><FileText size={16} /> PDF</button>
+            <button className="btn btn-secondary" onClick={() => handleExport('csv')}><Download size={16} /> CSV</button>
             <button className="btn btn-primary" onClick={() => navigate('/super-admin/subscriptions/plans/create')}>
               <Plus size={18} /> Create Plan
             </button>
           </div>
         </div>
 
-        <div className="toolbar">
+        <div className="toolbar" style={{ flexWrap: 'wrap', gap: '12px' }}>
           <div className="search-box">
             <Search size={18} color="var(--text-secondary)" />
-            <input type="text" placeholder="Search by ID, College, or License..." />
+            <input 
+              type="text" 
+              placeholder="Search by college name, ID, or invoice ref..." 
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+            />
           </div>
-          <div className="filters">
-            <button className="filter-btn"><Filter size={18} /> Plan Tier</button>
-            <button className="filter-btn"><Filter size={18} /> Status</button>
+
+          <div className="filters" style={{ flexWrap: 'wrap', gap: '8px' }}>
+            <select 
+              className="form-select" 
+              style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+              value={planFilter}
+              onChange={(e) => { setPlanFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="">All Plans</option>
+              <option value="enterprise">Enterprise</option>
+              <option value="professional">Professional</option>
+              <option value="standard">Standard</option>
+            </select>
+
+            <select 
+              className="form-select" 
+              style={{ padding: '8px 12px', fontSize: '0.85rem' }}
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+            >
+              <option value="">All Statuses</option>
+              <option value="active">Active</option>
+              <option value="expired">Expired</option>
+            </select>
+
+            {(searchTerm || planFilter || statusFilter) && (
+              <button className="btn btn-secondary" onClick={() => { setSearchTerm(''); setPlanFilter(''); setStatusFilter(''); setCurrentPage(1); }} style={{ fontSize: '0.8rem', padding: '6px 12px' }}>
+                Clear Filters
+              </button>
+            )}
           </div>
         </div>
 
         <div className="data-grid-container" style={{ overflowX: 'auto' }}>
-          <table className="enterprise-table" style={{ width: '100%', minWidth: '1200px' }}>
+          <table className="enterprise-table" style={{ width: '100%', minWidth: '1000px' }}>
             <thead>
               <tr>
-                <th>Subscription</th>
-                <th>Plan & License</th>
-                <th>Status & Duration</th>
-                <th>Capacity (Students/Preceptors)</th>
-                <th>Features</th>
+                <th onClick={() => handleSort('collegeName')} style={{ cursor: 'pointer' }}>
+                  College Name <ArrowUpDown size={12} />
+                </th>
+                <th onClick={() => handleSort('plan')} style={{ cursor: 'pointer' }}>
+                  Plan <ArrowUpDown size={12} />
+                </th>
+                <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>
+                  Status <ArrowUpDown size={12} />
+                </th>
+                <th>Validity & Dates</th>
+                <th>Amount</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {MOCK_DATA.map((sub) => (
-                <tr key={sub.id}>
-                  <td>
-                    <div style={{ fontWeight: 600 }}>{sub.college}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>ID: {sub.id}</div>
-                  </td>
-                  <td>
-                    <div>{getPlanPill(sub.plan)}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '4px', fontFamily: 'monospace' }}>{sub.license}</div>
-                  </td>
-                  <td>
-                    <div style={{ marginBottom: '4px' }}>{getStatusBadge(sub.status)}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                      <Calendar size={12} style={{ display: 'inline', marginRight: '4px' }}/> 
-                      {sub.end} ({sub.daysRemaining} days left)
-                    </div>
-                  </td>
-                  <td>
-                    <div className="usage-text">
-                      <Users size={14} color="var(--text-secondary)"/>
-                      <span>{sub.students.current} <span className="limit">/ {sub.students.max}</span></span>
-                    </div>
-                    <div className="usage-text" style={{ marginTop: '4px' }}>
-                      <Shield size={14} color="var(--text-secondary)"/>
-                      <span>{sub.preceptors.current} <span className="limit">/ {sub.preceptors.max}</span></span>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="feature-tags">
-                      <span className={`feature-tag ${sub.features.ai ? 'active' : ''}`}>AI</span>
-                      <span className={`feature-tag ${sub.features.reports ? 'active' : ''}`}>Reports</span>
-                      <span className={`feature-tag ${sub.features.library ? 'active' : ''}`}>Library</span>
-                    </div>
-                  </td>
-                  <td style={{ position: 'relative' }}>
-                    <button className="icon-btn-small" onClick={() => setActionMenuOpen(actionMenuOpen === sub.id ? null : sub.id)}>
-                      <MoreVertical size={18} />
-                    </button>
-                    
-                    {actionMenuOpen === sub.id && (
-                      <div style={{ position: 'absolute', right: '30px', top: '10px', backgroundColor: 'var(--surface-color)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '8px', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '180px' }}>
-                        <button className="btn btn-secondary w-full" style={{ justifyContent: 'flex-start', padding: '6px 12px' }} onClick={() => navigate('/super-admin/subscriptions/usage')}><Eye size={14}/> View Usage</button>
-                        <button className="btn btn-secondary w-full" style={{ justifyContent: 'flex-start', padding: '6px 12px' }} onClick={() => navigate('/super-admin/subscriptions/assign')}><Edit size={14}/> Change Plan</button>
-                        <button className="btn btn-secondary w-full" style={{ justifyContent: 'flex-start', padding: '6px 12px' }} onClick={() => navigate(`/super-admin/subscriptions/renew/${sub.id}`)}><RefreshCw size={14}/> Renew Subscription</button>
-                        <button className="btn btn-secondary w-full" style={{ justifyContent: 'flex-start', padding: '6px 12px' }} onClick={() => navigate('/super-admin/subscriptions/payments')}><FileText size={14}/> Payment History</button>
-                        <button className="btn btn-secondary w-full" style={{ justifyContent: 'flex-start', padding: '6px 12px' }} onClick={() => navigate('/super-admin/subscriptions/licenses')}><Key size={14}/> License Details</button>
-                        {sub.status !== 'Expired' ? (
-                          <button className="btn btn-danger w-full" style={{ justifyContent: 'flex-start', padding: '6px 12px', marginTop: '4px' }}>Suspend</button>
-                        ) : (
-                          <button className="btn btn-success w-full" style={{ justifyContent: 'flex-start', padding: '6px 12px', marginTop: '4px', backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>Activate</button>
-                        )}
-                      </div>
-                    )}
+              {paginated.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)' }}>
+                    <Shield size={40} style={{ opacity: 0.4, marginBottom: '0.5rem' }} />
+                    <div style={{ fontWeight: 600 }}>No Subscriptions Found</div>
+                    <div style={{ fontSize: '0.85rem', marginTop: '4px' }}>Try adjusting your search criteria.</div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginated.map((sub) => (
+                  <tr key={sub.id}>
+                    <td>
+                      <div style={{ fontWeight: 600, color: 'var(--text-color)' }}>{sub.collegeName}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Invoice: {sub.invoiceReference || sub.id}</div>
+                    </td>
+                    <td>{getPlanPill(sub.plan)}</td>
+                    <td>{getStatusBadge(sub.status)}</td>
+                    <td>
+                      <div style={{ fontSize: '0.85rem' }}>Expires: <strong>{sub.expiryDate}</strong></div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Started: {sub.startDate}</div>
+                    </td>
+                    <td style={{ fontWeight: 600, color: 'var(--primary-color)' }}>{sub.amount || '₹2,50,000 / yr'}</td>
+                    <td>
+                      <button 
+                        className="btn btn-secondary" 
+                        style={{ padding: '4px 10px', fontSize: '0.8rem' }}
+                        onClick={() => navigate(`/super-admin/subscriptions/renew/${sub.id}`)}
+                      >
+                        Renew Plan
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '12px 16px', backgroundColor: 'var(--surface-color)', borderRadius: '8px', border: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+            Showing {filtered.length > 0 ? (currentPage - 1) * pageSize + 1 : 0} to {Math.min(currentPage * pageSize, filtered.length)} of {filtered.length} Subscriptions
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <select className="form-select" style={{ padding: '4px 8px', fontSize: '0.85rem' }} value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}>
+              <option value={5}>5 per page</option>
+              <option value={10}>10 per page</option>
+              <option value={20}>20 per page</option>
+            </select>
+
+            <div style={{ display: 'flex', gap: '4px' }}>
+              <button className="btn btn-secondary" disabled={currentPage === 1} onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} style={{ padding: '4px 10px' }}>
+                <ChevronLeft size={16} />
+              </button>
+              <span style={{ padding: '6px 12px', fontSize: '0.85rem', fontWeight: 600 }}>Page {currentPage} of {totalPages}</span>
+              <button className="btn btn-secondary" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))} style={{ padding: '4px 10px' }}>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </div>
         </div>
 
       </div>

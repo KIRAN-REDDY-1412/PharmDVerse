@@ -54,6 +54,21 @@ const AddPreceptorModal = ({ isOpen, onClose, mode = 'add', initialData = null }
     }
   }, [mode, initialData, isOpen]);
 
+  // Keyboard Navigation & Escape key handler
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isOpen) {
+        if (isDirty) {
+          setShowUnsavedDialog(true);
+        } else {
+          onClose();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isDirty, onClose]);
+
   const calculateProfileCompletion = () => {
     const fieldsToTrack = [
       formData.preceptorId, formData.fullName, formData.gender, formData.dateOfBirth,

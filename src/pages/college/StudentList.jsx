@@ -10,6 +10,7 @@ import CollegeAdminLayout from '../../components/college/CollegeAdminLayout';
 import AddStudentModal from '../../components/college/student/AddStudentModal';
 import ResetPasswordModal from '../../components/college/student/ResetPasswordModal';
 import { useDatabase } from '../../context/DatabaseContext';
+import { exportToExcel, exportToPDF } from '../../utils/ExportEngine';
 import '../college/PreceptorList.css'; // Reuse enterprise CSS
 
 const StudentList = () => {
@@ -270,9 +271,40 @@ const StudentList = () => {
             </button>
           </div>
           
-          <button className="btn-export" onClick={() => window.print()}>
-            <Download size={16} /> Export
-          </button>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            <button 
+              className="btn-export" 
+              onClick={() => {
+                const cols = [
+                  { label: 'Roll No', key: 'id' },
+                  { label: 'Name', key: 'name' },
+                  { label: 'Course', key: 'course' },
+                  { label: 'Batch', key: 'batch' },
+                  { label: 'Year', key: 'academicYear' },
+                  { label: 'Status', key: 'status' }
+                ];
+                exportToExcel({ title: 'Student Roster Report', collegeName: 'PharmDVerse ERP', logoText: 'PDV', generatedBy: 'College Admin', academicYear: '2026-2027', columns: cols, data: filteredData, filename: 'Student_Roster' });
+              }}
+            >
+              <Download size={14} /> Excel
+            </button>
+            <button 
+              className="btn-export" 
+              onClick={() => {
+                const cols = [
+                  { label: 'Roll No', key: 'id' },
+                  { label: 'Name', key: 'name' },
+                  { label: 'Course', key: 'course' },
+                  { label: 'Batch', key: 'batch' },
+                  { label: 'Year', key: 'academicYear' },
+                  { label: 'Status', key: 'status' }
+                ];
+                exportToPDF({ title: 'Student Roster Report', collegeName: 'PharmDVerse ERP', logoText: 'PDV', generatedBy: 'College Admin', academicYear: '2026-2027', columns: cols, data: filteredData, filename: 'Student_Roster' });
+              }}
+            >
+              <FileText size={14} /> PDF
+            </button>
+          </div>
         </div>
 
         {/* Advanced Filters Tray */}

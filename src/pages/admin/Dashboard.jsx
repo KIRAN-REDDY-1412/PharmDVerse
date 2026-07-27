@@ -176,7 +176,7 @@ const SuperAdminDashboard = () => {
           <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ fontSize: '1rem', fontWeight: 600 }}>Recent College Registrations</h3>
-              <Link to="/coming-soon" style={{ fontSize: '0.85rem', color: 'var(--color-primary)', textDecoration: 'none' }}>View All</Link>
+              <Link to="/super-admin/colleges" style={{ fontSize: '0.85rem', color: 'var(--color-primary)', textDecoration: 'none' }}>View All</Link>
             </div>
             <div>
               {[
@@ -198,7 +198,7 @@ const SuperAdminDashboard = () => {
           <div style={{ background: 'var(--bg-surface)', borderRadius: '12px', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--color-text)', margin: 0 }}>Upcoming Renewals</h2>
-              <Link to="/coming-soon" style={{ fontSize: '0.85rem', color: 'var(--color-primary)', textDecoration: 'none' }}>View All</Link>
+              <Link to="/super-admin/subscriptions" style={{ fontSize: '0.85rem', color: 'var(--color-primary)', textDecoration: 'none' }}>View All</Link>
             </div>
             <div>
               {[
