@@ -1,51 +1,72 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateToken, requireRoles } = require('../middlewares/authMiddleware');
+const prisma = require('../prisma');
+const { authenticateToken } = require('../middlewares/authMiddleware');
 
-// In-Memory Colleges Store
-let COLLEGES_DB = [
-  { id: 'COL-001', slug: 'amr', name: 'AMR College of Pharmacy', code: 'AMRCP-01', domain: 'amr.pharmdverse.com', status: 'Active', plan: 'Enterprise', students: 1250, preceptors: 120, cases: 4500 },
-  { id: 'COL-002', slug: 'gitam', name: 'GITAM Institute of Pharmacy', code: 'GITAM-02', domain: 'gitam.pharmdverse.com', status: 'Active', plan: 'Professional', students: 850, preceptors: 45, cases: 2800 },
-  { id: 'COL-003', slug: 'vignan', name: 'Vignan Pharmacy College', code: 'VIGNAN-03', domain: 'vignan.pharmdverse.com', status: 'Active', plan: 'Standard', students: 620, preceptors: 30, cases: 1900 }
-];
-
-// GET /api/v1/colleges (Super Admin or Landing Pages)
-router.get('/', (req, res) => {
-  res.json({ success: true, count: COLLEGES_DB.length, data: COLLEGES_DB });
+// GET /api/v1/colleges
+router.get('/', async (req, res) => {
+  try {
+    const list = await prisma.college.findMany({
+      include: { subscriptions: true },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, count: list.length, data: list });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch colleges' });
+  }
 });
 
 // GET /api/v1/colleges/by-slug/:slug
-router.get('/by-slug/:slug', (req, res) => {
-  const col = COLLEGES_DB.find(c => c.slug.toLowerCase() === req.params.slug.toLowerCase());
-  if (!col) return res.status(404).json({ error: 'College not found' });
-  res.json({ success: true, data: col });
+router.get('/by-slug/:slug', async (req, res) => {
+  try {
+    const col = await prisma.college.findUnique({
+      where: { slug: req.params.slug },
+      include: { subscriptions: true, landingPage: true }
+    });
+
+    if (!col) return res.status(404).json({ error: 'Institution not found' });
+    res.json({ success: true, data: col });
+  } catch (err) {
+    res.status(500).json({ error: 'Error fetching institution' });
+  }
 });
 
-// POST /api/v1/colleges (Super Admin Direct Registration)
-router.post('/', authenticateToken, requireRoles('superadmin'), (req, res) => {
-  const newCol = {
-    id: `COL-${Date.now()}`,
-    slug: (req.body.name || 'college').toLowerCase().replace(/[^a-z0-9]/g, ''),
-    name: req.body.name,
-    code: req.body.code || `CODE-${Date.now()}`,
-    domain: req.body.domain || `${req.body.slug}.pharmdverse.com`,
-    status: 'Active',
-    plan: req.body.subscriptionPlan || 'Enterprise',
-    students: 0,
-    preceptors: 0,
-    cases: 0,
-    createdAt: new Date().toISOString()
-  };
-  COLLEGES_DB.push(newCol);
-  res.status(201).json({ success: true, data: newCol });
+// POST /api/v1/colleges
+router.post('/', authenticateToken, async (req, res) => {
+  try {
+    const slug = (req.body.slug || req.body.name).toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    const created = await prisma.college.create({
+      data: {
+        id: req.body.id || `COL-${Date.now()}`,
+        slug,
+        name: req.body.name,
+        code: req.body.code || slug.toUpperCase(),
+        domain: req.body.domain || `${slug}.pharmdverse.com`,
+        principalName: req.body.principalName,
+        principalEmail: req.body.principalEmail,
+        contactMobile: req.body.contactMobile || req.body.phone,
+        address: req.body.address,
+        status: 'ACTIVE'
+      }
+    });
+
+    res.status(201).json({ success: true, data: created });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to create college' });
+  }
 });
 
 // PUT /api/v1/colleges/:id/status
-router.put('/:id/status', authenticateToken, requireRoles('superadmin'), (req, res) => {
-  const col = COLLEGES_DB.find(c => c.id === req.params.id);
-  if (!col) return res.status(404).json({ error: 'College not found' });
-  col.status = req.body.status || col.status;
-  res.json({ success: true, data: col });
+router.put('/:id/status', authenticateToken, async (req, res) => {
+  try {
+    const updated = await prisma.college.update({
+      where: { id: req.params.id },
+      data: { status: req.body.status ? req.body.status.toUpperCase() : 'ACTIVE' }
+    });
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update college status' });
+  }
 });
 
 module.exports = router;

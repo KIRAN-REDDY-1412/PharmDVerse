@@ -2,15 +2,13 @@ import React from 'react';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { User, MessageSquare, Pill, Activity, AlertTriangle, ChevronRight, ArrowLeft } from 'lucide-react';
 import { useDatabase } from '../../context/DatabaseContext';
-import { MOCK_CASES } from '../../data/mockData';
 
 const ClinicalDocumentationHub = ({ role = 'student' }) => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { cases } = useDatabase();
   
-  const caseData = cases.find(c => c.id === id) || 
-                   MOCK_CASES.find(c => c.id === id);
+  const caseData = cases.find(c => c.id === id);
 
   const getStatusBadge = (status) => {
     if (!status) return null;

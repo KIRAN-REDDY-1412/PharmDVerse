@@ -5,7 +5,6 @@ import StudentLayout from '../student/StudentLayout';
 import CollegeAdminLayout from '../college/CollegeAdminLayout';
 import AdminLayout from '../admin/AdminLayout';
 import { useDatabase } from '../../context/DatabaseContext';
-import { MOCK_CASES } from '../../data/mockData';
 import '../../pages/college/PreceptorManagement.css';
 import './PatientProfileForm.css';
 

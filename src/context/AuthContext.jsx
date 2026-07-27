@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { INITIAL_USERS } from '../data/MockDatabase';
 import ApiService from '../services/api';
 
 const AuthContext = createContext();
@@ -9,7 +8,6 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  // Try to load from localStorage first, otherwise default to Student for initial testing
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       if (typeof localStorage !== 'undefined') {
@@ -19,33 +17,35 @@ export const AuthProvider = ({ children }) => {
         }
       }
     } catch (e) {
-      console.warn('Error loading erp_currentUser from localStorage:', e);
+      console.warn('Error loading erp_currentUser:', e);
     }
-    return INITIAL_USERS.find(u => u.role === 'student') || INITIAL_USERS[0]; 
+    return null; 
   });
 
   useEffect(() => {
-    localStorage.setItem('erp_currentUser', JSON.stringify(currentUser));
+    if (currentUser) {
+      localStorage.setItem('erp_currentUser', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('erp_currentUser');
+    }
   }, [currentUser]);
 
   const login = async (userOrRole, password) => {
     if (typeof userOrRole === 'object' && userOrRole !== null) {
       setCurrentUser(userOrRole);
-    } else {
-      try {
-        const res = await ApiService.login({ email: userOrRole, username: userOrRole, password });
-        if (res.token) {
-          localStorage.setItem('erp_token', res.token);
-          setCurrentUser(res.user);
-          return res;
-        }
-      } catch (err) {
-        console.warn('API login failed, using local context matching:', err.message);
+      return { success: true, user: userOrRole };
+    }
+
+    try {
+      const res = await ApiService.login({ email: userOrRole, username: userOrRole, password });
+      if (res && res.token) {
+        localStorage.setItem('erp_token', res.token);
+        setCurrentUser(res.user);
+        return res;
       }
-      const user = INITIAL_USERS.find(u => u.role === userOrRole || u.email === userOrRole);
-      if (user) {
-        setCurrentUser(user);
-      }
+    } catch (err) {
+      console.warn('API login error:', err.message);
+      throw err;
     }
   };
 

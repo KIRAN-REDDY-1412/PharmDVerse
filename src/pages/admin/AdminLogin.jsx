@@ -26,14 +26,7 @@ const AdminLogin = () => {
 
       <div className="login-modal-content card animate-slide-up" style={{ width: '100%', maxWidth: '420px' }}>
         
-        {/* Development Badge */}
-        <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid var(--color-red)', borderRadius: 'var(--radius-md)', padding: '0.75rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
-          <ShieldAlert size={20} style={{ color: 'var(--color-red)', flexShrink: 0 }} />
-          <div>
-            <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-red)', marginBottom: '0.25rem' }}>Development Mode</span>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Authentication is temporarily disabled for UI testing.</span>
-          </div>
-        </div>
+
 
         <div className="login-header" style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(15, 76, 129, 0.1)', color: 'var(--color-primary)', marginBottom: '1rem' }}>

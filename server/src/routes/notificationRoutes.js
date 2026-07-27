@@ -1,30 +1,61 @@
 const express = require('express');
 const router = express.Router();
+const prisma = require('../prisma');
 const { authenticateToken } = require('../middlewares/authMiddleware');
 
-let NOTIFICATIONS_DB = [
-  { id: 'NOTIF-001', recipientId: 'USR-SA-001', senderName: 'AMR College Admin', title: 'New Registration Request', message: 'AMR College submitted direct subscription request.', status: 'Unread', date: new Date().toISOString() },
-  { id: 'NOTIF-002', recipientId: 'USR-26-833', senderName: 'David Smith', title: 'New Case Submitted', message: 'Case #CASE-2026-001 submitted for your SOAP evaluation.', status: 'Unread', date: new Date().toISOString() }
-];
-
 // GET /api/v1/notifications
-router.get('/', authenticateToken, (req, res) => {
-  const userId = req.user.id;
-  const list = NOTIFICATIONS_DB.filter(n => n.recipientId === userId || req.user.role === 'superadmin');
-  res.json({ success: true, count: list.length, data: list });
+router.get('/', authenticateToken, async (req, res) => {
+  try {
+    const list = await prisma.notification.findMany({
+      where: { recipientId: req.user.id },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, count: list.length, data: list });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+});
+
+// POST /api/v1/notifications
+router.post('/', authenticateToken, async (req, res) => {
+  try {
+    const created = await prisma.notification.create({
+      data: {
+        recipientId: req.body.recipientId,
+        senderId: req.user ? req.user.id : null,
+        title: req.body.title,
+        message: req.body.message,
+        category: req.body.category || 'System Alert',
+        status: 'Unread'
+      }
+    });
+    res.status(201).json({ success: true, data: created });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to send notification' });
+  }
 });
 
 // PUT /api/v1/notifications/:id/read
-router.put('/:id/read', authenticateToken, (req, res) => {
-  const n = NOTIFICATIONS_DB.find(item => item.id === req.params.id);
-  if (n) n.status = 'Read';
-  res.json({ success: true });
+router.put('/:id/read', authenticateToken, async (req, res) => {
+  try {
+    const updated = await prisma.notification.update({
+      where: { id: req.params.id },
+      data: { status: 'Read' }
+    });
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to update notification' });
+  }
 });
 
 // DELETE /api/v1/notifications/:id
-router.delete('/:id', authenticateToken, (req, res) => {
-  NOTIFICATIONS_DB = NOTIFICATIONS_DB.filter(item => item.id !== req.params.id);
-  res.json({ success: true });
+router.delete('/:id', authenticateToken, async (req, res) => {
+  try {
+    await prisma.notification.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to delete notification' });
+  }
 });
 
 module.exports = router;

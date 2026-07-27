@@ -10,9 +10,7 @@ const StudentCaseViewPage = () => {
   const navigate = useNavigate();
   const { cases } = useDatabase();
   
-  // Note: For real applications, fetch from central db based on current user's ID
-  const caseData = cases.find(c => c.id === id) || 
-    require('../../data/mockData').MOCK_CASES.find(c => c.id === id);
+  const caseData = cases.find(c => c.id === id);
 
   if (!caseData) {
     return (

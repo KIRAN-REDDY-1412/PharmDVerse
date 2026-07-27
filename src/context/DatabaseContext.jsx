@@ -1,9 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  INITIAL_USERS, INITIAL_CASES, INITIAL_NOTIFICATIONS, INITIAL_ACADEMIC_YEARS, 
-  INITIAL_PROMOTION_LOGS, INITIAL_COLLEGES, INITIAL_REGISTRATION_REQUESTS, 
-  INITIAL_SUBSCRIPTIONS, INITIAL_ROLE_PERMISSIONS, INITIAL_RELEASES, INITIAL_PLATFORM_SETTINGS 
-} from '../data/MockDatabase';
 import { useAuth } from './AuthContext';
 import ApiService from '../services/api';
 
@@ -24,84 +19,24 @@ export const useDatabase = () => {
   return useContext(DatabaseContext);
 };
 
-const safeStorageParse = (key, fallback) => {
-  try {
-    if (typeof localStorage === 'undefined') return fallback;
-    const item = localStorage.getItem(key);
-    if (!item || item === 'undefined' || item === 'null') return fallback;
-    return JSON.parse(item);
-  } catch (e) {
-    console.warn(`Error parsing ${key} from localStorage:`, e);
-    return fallback;
-  }
-};
-
 export const DatabaseProvider = ({ children }) => {
   const auth = useAuth() || {};
   const { currentUser } = auth;
 
-  // Load from localStorage or use initial seed data
-  const [users, setUsers] = useState(() => safeStorageParse('erp_users', INITIAL_USERS));
-
-  const [cases, setCases] = useState(() => {
-    let parsedCases = safeStorageParse('erp_cases', INITIAL_CASES);
-    if (parsedCases.length > 0 && (!parsedCases[0].forms || !parsedCases[0].forms.patientProfile.data.patientInformation)) {
-      console.warn("Old minimal case structure detected. Migrating to new comprehensive forms structure.");
-      parsedCases = INITIAL_CASES;
-      try { localStorage.setItem('erp_cases', JSON.stringify(INITIAL_CASES)); } catch (e) {}
-    }
-    return parsedCases;
-  });
-
-  const [notifications, setNotifications] = useState(() => safeStorageParse('erp_notifications', INITIAL_NOTIFICATIONS));
-  const [academicYears, setAcademicYears] = useState(() => safeStorageParse('erp_academic_years', INITIAL_ACADEMIC_YEARS));
-  const [promotionLogs, setPromotionLogs] = useState(() => safeStorageParse('erp_promotion_logs', INITIAL_PROMOTION_LOGS));
-  const [auditLogs, setAuditLogs] = useState(() => safeStorageParse('erp_audit_logs', []));
-  const [colleges, setColleges] = useState(() => safeStorageParse('erp_colleges', INITIAL_COLLEGES));
-  const [registrationRequests, setRegistrationRequests] = useState(() => safeStorageParse('erp_registration_requests', INITIAL_REGISTRATION_REQUESTS));
-  const [subscriptions, setSubscriptions] = useState(() => safeStorageParse('erp_subscriptions', INITIAL_SUBSCRIPTIONS));
-  const [rolePermissions, setRolePermissions] = useState(() => safeStorageParse('erp_role_permissions', INITIAL_ROLE_PERMISSIONS));
-  const [releases, setReleases] = useState(() => safeStorageParse('erp_releases', INITIAL_RELEASES));
-  const [platformSettings, setPlatformSettings] = useState(() => safeStorageParse('erp_platform_settings', INITIAL_PLATFORM_SETTINGS));
-
-  const INITIAL_BACKUPS_SEED = [
-    {
-      id: 'BAK-FULL-20260727-01',
-      name: 'FULL-PLATFORM-BACKUP-2026-07-27.bak',
-      date: '2026-07-27T02:00:00Z',
-      size: '1.24 GB',
-      createdBy: 'Super Admin',
-      type: 'Full Platform',
-      status: 'Completed',
-      scope: 'Full Platform (Database, Cases, Landing Pages, Config)'
-    },
-    {
-      id: 'BAK-COL001-20260720-02',
-      name: 'AMR-COLLEGE-SNAPSHOT-2026-07-20.bak',
-      date: '2026-07-20T14:30:00Z',
-      size: '340 MB',
-      createdBy: 'Super Admin',
-      type: 'College Specific (AMR)',
-      status: 'Completed',
-      scope: 'AMR College of Pharmacy Tenant Data'
-    },
-    {
-      id: 'BAK-SCHED-20260726-03',
-      name: 'NIGHTLY-AUTO-BACKUP-2026-07-26.bak',
-      date: '2026-07-26T02:00:00Z',
-      size: '1.21 GB',
-      createdBy: 'System Scheduler',
-      type: 'Scheduled (Daily)',
-      status: 'Completed',
-      scope: 'Full Platform Database & System Configuration'
-    }
-  ];
-
-  const [backups, setBackups] = useState(() => {
-    const saved = localStorage.getItem('erp_backups');
-    return saved ? JSON.parse(saved) : INITIAL_BACKUPS_SEED;
-  });
-
+  // React State initialized for live REST API payloads
+  const [users, setUsers] = useState([]);
+  const [cases, setCases] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [academicYears, setAcademicYears] = useState([]);
+  const [promotionLogs, setPromotionLogs] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
+  const [colleges, setColleges] = useState([]);
+  const [registrationRequests, setRegistrationRequests] = useState([]);
+  const [subscriptions, setSubscriptions] = useState([]);
+  const [rolePermissions, setRolePermissions] = useState([]);
+  const [releases, setReleases] = useState([]);
+  const [platformSettings, setPlatformSettings] = useState({ erpVersion: '2.1.0', maintenanceMode: false });
+  const [backups, setBackups] = useState([]);
   // Sandbox testing mode simulation state
   const [testingSession, setTestingSession] = useState(null); // { role: 'admin'|'preceptor'|'student', collegeId: 'COL-001' }
 
@@ -128,59 +63,6 @@ export const DatabaseProvider = ({ children }) => {
     };
     syncBackendData();
   }, []);
-
-  // Persist to localStorage on change
-  useEffect(() => {
-    localStorage.setItem('erp_users', JSON.stringify(users));
-  }, [users]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_cases', JSON.stringify(cases));
-  }, [cases]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_notifications', JSON.stringify(notifications));
-  }, [notifications]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_academic_years', JSON.stringify(academicYears));
-  }, [academicYears]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_promotion_logs', JSON.stringify(promotionLogs));
-  }, [promotionLogs]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_audit_logs', JSON.stringify(auditLogs));
-  }, [auditLogs]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_colleges', JSON.stringify(colleges));
-  }, [colleges]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_registration_requests', JSON.stringify(registrationRequests));
-  }, [registrationRequests]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_subscriptions', JSON.stringify(subscriptions));
-  }, [subscriptions]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_role_permissions', JSON.stringify(rolePermissions));
-  }, [rolePermissions]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_releases', JSON.stringify(releases));
-  }, [releases]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_platform_settings', JSON.stringify(platformSettings));
-  }, [platformSettings]);
-
-  useEffect(() => {
-    localStorage.setItem('erp_backups', JSON.stringify(backups));
-  }, [backups]);
 
   const logAudit = (module, prevValue, updatedValue, modifiedBy) => {
     const newLog = {
