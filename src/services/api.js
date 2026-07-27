@@ -1,11 +1,13 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdjc2NreG12aGRua3FudGd4YXpxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxNTczODYsImV4cCI6MjEwMDczMzM4Nn0.yuJ0R4wcwa5tkSQ6KUhVHPnRfB3Y2d1Y2coCJbVAfzM';
 
 class ApiService {
   static getAuthHeaders() {
     const token = localStorage.getItem('erp_token') || sessionStorage.getItem('erp_token');
     return {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` })
+      'apikey': SUPABASE_ANON_KEY,
+      ...(token ? { Authorization: `Bearer ${token}` } : { Authorization: `Bearer ${SUPABASE_ANON_KEY}` })
     };
   }
 
