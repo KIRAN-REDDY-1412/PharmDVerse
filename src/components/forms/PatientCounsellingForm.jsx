@@ -1,13 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, Save, Send, UserCheck, Stethoscope, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
-import StudentLayout from '../../components/student/StudentLayout';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ChevronRight, ChevronLeft, Save, Send, UserCheck, Stethoscope, AlertCircle, FileText, CheckCircle2 } from 'lucide-react';
+import StudentLayout from '../student/StudentLayout';
+import CollegeAdminLayout from '../college/CollegeAdminLayout';
+import AdminLayout from '../admin/AdminLayout';
 import { useDatabase } from '../../context/DatabaseContext';
+import '../../pages/college/PreceptorManagement.css';
 import './PatientProfileForm.css';
 
-const PatientCounsellingForm = () => {
+const PatientCounsellingForm = ({ role = 'student' }) => {
   const navigate = useNavigate();
-  const { submitCase, saveDraftCase } = useDatabase();
+  const { id } = useParams();
+  const { cases, submitCase, saveDraftCase, updateFormStatus } = useDatabase();
+
+  const isAdmin = role === 'admin';
+  const isPreceptor = role === 'preceptor';
+  const isSuperAdmin = role === 'superadmin';
+  const Layout = (isPreceptor || isAdmin || isSuperAdmin) ? React.Fragment : StudentLayout;
+  
+  const existingCase = id ? cases.find(c => c.id === id) : null;
+  const isLocked = isPreceptor || isAdmin || isSuperAdmin || (existingCase && ['Approved', 'Submitted', 'Under Review'].includes(existingCase.status));
+  
+  let dashboardPath = '/student/dashboard';
+  let backPath = '/student/new-case';
+  let backText = 'New Case';
+
+  if (isPreceptor) {
+    dashboardPath = '/preceptor/dashboard';
+    backPath = `/preceptor/cases/view/${id}`;
+    backText = 'Review Case';
+  } else if (isSuperAdmin) {
+    dashboardPath = '/super-admin/dashboard';
+    backPath = `/super-admin/cases/view/${id}`;
+    backText = 'View Case';
+  } else if (isAdmin) {
+    dashboardPath = '/college-admin/dashboard';
+    backPath = `/college-admin/cases/view/${id}`;
+    backText = 'View Case';
+  } else if (id) {
+    backPath = `/student/cases/view/${id}`;
+    backText = 'View Case';
+  }
+
+  const formStatus = existingCase?.forms?.patientCounselling?.status || 'Pending';
+  const [preceptorComments, setPreceptorComments] = useState(existingCase?.forms?.patientCounselling?.comments || '');
+  const isReturned = existingCase && existingCase.status === 'Returned';
   
   // Section Navigation
   const [activeSection, setActiveSection] = useState(1);
@@ -21,6 +58,16 @@ const PatientCounsellingForm = () => {
 
   const handleNext = () => { if (activeSection < sections.length) setActiveSection(prev => prev + 1); };
   const handlePrev = () => { if (activeSection > 1) setActiveSection(prev => prev - 1); };
+
+  // Scroll content to top when section changes
+  const contentBodyRef = useRef(null);
+  useEffect(() => {
+    if (contentBodyRef.current) {
+      contentBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeSection]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -161,18 +208,10 @@ const PatientCounsellingForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (isPreceptor) return;
     setIsSubmitting(true);
-    submitCase({
-      docType: 'Patient Counselling',
-      patientName: formData.patientName,
-      age: formData.age,
-      gender: formData.gender,
-      diagnosis: formData.diseaseCounselled || 'Not specified',
-      hospital: 'City General Hospital',
-      department: formData.ward,
-      ...formData
-    });
+    submitCase({ docType: 'Patient Counselling', ...formData });
     setTimeout(() => {
       setIsSubmitting(false);
       navigate('/student/cases/submitted');
@@ -180,30 +219,23 @@ const PatientCounsellingForm = () => {
   };
 
   const handleSaveDraft = () => {
-    saveDraftCase({
-      docType: 'Patient Counselling',
-      patientName: formData.patientName,
-      age: formData.age,
-      gender: formData.gender,
-      diagnosis: formData.diseaseCounselled || 'Not specified',
-      hospital: 'City General Hospital',
-      department: formData.ward,
-      ...formData
-    });
+    if (isPreceptor) return;
+    saveDraftCase({ docType: 'Patient Counselling', ...formData });
     alert("Draft saved successfully!");
   };
 
   return (
-    <StudentLayout>
+    <Layout>
+
       <div className="preceptor-page">
         {/* Header */}
         <div className="page-header" style={{ marginBottom: '1rem' }}>
           <div>
-            <h1 className="page-title">Patient Counselling Documentation</h1>
+            <h1 className="page-title">Patient Counselling Form</h1>
             <div className="breadcrumbs" style={{ marginTop: '0.5rem' }}>
-              <Link to="/student/dashboard" className="breadcrumb-link">Dashboard</Link>
+              <Link to={dashboardPath} className="breadcrumb-link">Dashboard</Link>
               <span className="breadcrumb-separator">&gt;</span>
-              <Link to="/student/new-case" className="breadcrumb-link">New Case</Link>
+              <Link to={backPath} className="breadcrumb-link">{backText}</Link>
               <span className="breadcrumb-separator">&gt;</span>
               <span>Patient Counselling</span>
             </div>
@@ -236,18 +268,30 @@ const PatientCounsellingForm = () => {
           <div className="workspace-content">
             <div className="workspace-content-header">
               <h1 className="workspace-content-title">{sections.find(s => s.id === activeSection)?.title}</h1>
-              {activeSection !== sections.length && (
-                <button 
-                  className="btn-submit" 
-                  style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-                  onClick={() => setActiveSection(activeSection + 1)}
-                >
-                  Next Section <ChevronRight size={16} />
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {activeSection > 1 && (
+                  <button 
+                    className="btn-secondary" 
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    onClick={handlePrev}
+                  >
+                    <ChevronLeft size={16} /> Previous
+                  </button>
+                )}
+                {activeSection !== sections.length && (
+                  <button 
+                    className="btn-submit" 
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    onClick={handleNext}
+                  >
+                    Next Section <ChevronRight size={16} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="workspace-content-body">
+            <div ref={contentBodyRef} className="workspace-content-body">
+              <fieldset disabled={isLocked} style={{ border: 'none', padding: 0, margin: 0 }}>
               {/* SECTION 1: Patient Information (Auto-fetched mostly) */}
               {activeSection === 1 && (
               <div className="form-section">
@@ -255,16 +299,16 @@ const PatientCounsellingForm = () => {
                   <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Patient demographics are automatically fetched from the Master Patient Profile.</p>
                 </div>
                 
-                <div className="form-grid">
-                  <div className="form-group">
+                <div className="form-row">
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                     <label className="form-label">Date</label>
                     <input type="date" className="form-input" name="date" value={formData.date} onChange={handleInputChange} />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                     <label className="form-label">Time</label>
                     <input type="time" className="form-input" name="time" value={formData.time} onChange={handleInputChange} />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ flex: 1.5, minWidth: '200px' }}>
                     <label className="form-label">Type of Patient</label>
                     <select className="form-select" name="patientType" value={formData.patientType} onChange={handleInputChange}>
                       <option value="">Select</option>
@@ -274,20 +318,20 @@ const PatientCounsellingForm = () => {
                   </div>
                 </div>
 
-                <div className="form-grid">
-                  <div className="form-group">
+                <div className="form-row">
+                  <div className="form-group" style={{ flex: 2, minWidth: '200px' }}>
                     <label className="form-label">Patient Name</label>
                     <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.patientName} readOnly />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">I.P / O.P No</label>
-                    <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.ipNumber} readOnly />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Age / Sex</label>
+                  <div className="form-group" style={{ flex: 1, minWidth: '100px' }}>
+                    <label className="form-label">Age / Gender</label>
                     <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={`${formData.age} / ${formData.gender}`} readOnly />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ flex: 1.5, minWidth: '150px' }}>
+                    <label className="form-label">IPD No / CR No.</label>
+                    <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.ipNumber} readOnly />
+                  </div>
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
                     <label className="form-label">Unit / Ward</label>
                     <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.ward} readOnly />
                   </div>
@@ -319,12 +363,12 @@ const PatientCounsellingForm = () => {
 
                 <div className="form-group" style={{ marginTop: '1.5rem' }}>
                   <label className="form-label">Disease Counselled</label>
-                  <textarea className="form-textarea" name="diseaseCounselled" value={formData.diseaseCounselled} onChange={handleInputChange} onBlur={handleBlur} placeholder="Detail the disease context discussed..."></textarea>
+                  <textarea className="form-textarea" name="diseaseCounselled" value={formData.diseaseCounselled} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g. Hypertension management"></textarea>
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Medications Counselled</label>
-                  <textarea className="form-textarea" name="medicationsCounselled" value={formData.medicationsCounselled} onChange={handleInputChange} onBlur={handleBlur} placeholder="List medications explicitly counselled..."></textarea>
+                  <textarea className="form-textarea" name="medicationsCounselled" value={formData.medicationsCounselled} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g. Amlodipine 5mg OD"></textarea>
                 </div>
               </div>
             )}
@@ -333,7 +377,7 @@ const PatientCounsellingForm = () => {
             {activeSection === 3 && (
               <div className="form-section">
                 <label className="form-label" style={{ marginBottom: '1rem', display: 'block' }}>Points covered during counselling session (Check all that apply)</label>
-                <div className="form-grid" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div className="form-row" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
                       <input type="checkbox" name="pointsNamePurpose" checked={formData.pointsNamePurpose} onChange={handleInputChange} style={{ width: '18px', height: '18px', marginTop: '2px' }} />
@@ -393,7 +437,7 @@ const PatientCounsellingForm = () => {
                 {formData.providedTo === 'Representative' && (
                   <div className="form-group" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', marginTop: '1rem', borderLeft: '4px solid var(--color-purple)' }}>
                     <label className="form-label" style={{ marginBottom: '1rem', display: 'block' }}>If patient's representative, give reason:</label>
-                    <div className="form-grid-3">
+                    <div className="form-row">
                       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                         <input type="checkbox" name="rep_unconscious" checked={formData.representativeReason.unconscious} onChange={handleInputChange} />
                         Patient is unconscious
@@ -429,7 +473,7 @@ const PatientCounsellingForm = () => {
             {activeSection === 4 && (
               <div className="form-section">
                 
-                <div className="form-grid">
+                <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Any major barriers involved?</label>
                     <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
@@ -449,7 +493,7 @@ const PatientCounsellingForm = () => {
                   <div style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
                     <div className="form-group">
                       <label className="form-label">If Yes, Specify</label>
-                      <input type="text" className="form-input" name="barriersSpecify" value={formData.barriersSpecify} onChange={handleInputChange} onBlur={handleBlur} />
+                      <input type="text" className="form-input" name="barriersSpecify" value={formData.barriersSpecify} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g. Language barrier" />
                     </div>
                     <div className="form-group" style={{ marginTop: '1rem' }}>
                       <label className="form-label">Whether barrier was rightly overcome?</label>
@@ -469,7 +513,7 @@ const PatientCounsellingForm = () => {
 
                 <div className="form-group" style={{ marginTop: '1.5rem' }}>
                   <label className="form-label">Time taken for counselling</label>
-                  <div className="form-grid-3" style={{ marginTop: '0.5rem' }}>
+                  <div className="form-row" style={{ marginTop: '0.5rem' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                       <input type="radio" name="timeTaken" value="Less than 10 min" checked={formData.timeTaken === 'Less than 10 min'} onChange={handleInputChange} style={{ width: '18px', height: '18px' }} />
                       Less than 10 min.
@@ -487,12 +531,12 @@ const PatientCounsellingForm = () => {
 
                 <div className="form-group" style={{ marginTop: '2rem' }}>
                   <label className="form-label">Counselling aids used</label>
-                  <input type="text" className="form-input" name="counsellingAids" value={formData.counsellingAids} onChange={handleInputChange} onBlur={handleBlur} />
+                  <input type="text" className="form-input" name="counsellingAids" value={formData.counsellingAids} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g. Pictograms" />
                 </div>
 
                 <div className="form-group">
                   <label className="form-label">Counselling material provided</label>
-                  <input type="text" className="form-input" name="materialProvided" value={formData.materialProvided} onChange={handleInputChange} onBlur={handleBlur} />
+                  <input type="text" className="form-input" name="materialProvided" value={formData.materialProvided} onChange={handleInputChange} onBlur={handleBlur} placeholder="e.g. Dietary chart" />
                 </div>
 
                 <div className="form-group" style={{ marginTop: '2rem' }}>
@@ -521,26 +565,34 @@ const PatientCounsellingForm = () => {
                 
                 <div className="review-section" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px' }}>
                   <h3 className="review-section-title" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>Documentation Summary</h3>
-                  <div className="review-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                    {Object.entries(formData).map(([key, value]) => {
-                      if (typeof value === 'object' && value !== null) return null; // Skip complex arrays in summary
-                      if (key.includes('points') || key.includes('rep_')) {
-                        if (value !== true) return null; // Only show checked items for long checklists
-                      }
-                      
-                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
-                      const displayValue = value === true ? 'Yes' : value === false ? 'No' : value || '-';
-                      
-                      return (
-                        <div key={key} className="review-item">
-                          <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{label}</span>
-                          <span style={{ display: 'block', fontWeight: 500, color: value ? 'var(--text-main)' : 'var(--text-secondary)' }}>
-                            {displayValue}
-                          </span>
-                        </div>
-                      );
-                    })}
+                  
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Counselling Details</h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--border-color)' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--bg-surface)' }}>
+                          <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border-color)', width: '30%', color: 'var(--text-secondary)' }}>Field</th>
+                          <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>Entered Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Date / Time</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.date} / {formData.time}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Patient Type</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.patientType || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Disease Counselled</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.diseaseCounselled || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Medications Counselled</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.medicationsCounselled || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Time Taken</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.timeTaken || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Barriers Involved</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.barriersInvolved || '-'}</td></tr>
+                        {formData.barriersInvolved === 'Yes' && (
+                          <>
+                            <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Barrier Details</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.barriersSpecify || '-'}</td></tr>
+                            <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Barrier Overcome</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.barriersOvercome || '-'}</td></tr>
+                          </>
+                        )}
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Provided To</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.providedTo || '-'}</td></tr>
+                      </tbody>
+                    </table>
                   </div>
+
                 </div>
                 
                 <div className="workspace-actions">
@@ -552,11 +604,20 @@ const PatientCounsellingForm = () => {
               </div>
             )}
 
+              </fieldset>
             </div> {/* End workspace-content-body */}
+          <div className="case-content-header" style={{ marginLeft: '1.5rem', marginTop: '1.5rem', marginRight: '1.5rem' }}>
+            {isPreceptor && (
+              <div style={{ backgroundColor: '#fff8e1', border: '1px solid #ffe082', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.85rem', color: '#8f6b00', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <AlertCircle size={16} /> Read-Only Mode (Student Data)
+              </div>
+            )}
           </div>
-        </div>
+
+        </div> {/* End workspace-content */}
       </div>
-    </StudentLayout>
+      </div>
+    </Layout>
   );
 };
 

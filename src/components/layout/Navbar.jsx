@@ -70,9 +70,6 @@ const Navbar = ({ onLoginClick, onRegisterClick }) => {
 
         {/* Mobile Hamburger */}
         <div className="mobile-only flex items-center gap-4">
-          <button className="theme-toggle" onClick={toggleTheme}>
-             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-          </button>
           <button 
             className="hamburger-btn" 
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -95,6 +92,9 @@ const Navbar = ({ onLoginClick, onRegisterClick }) => {
             ))}
           </ul>
           <div className="mobile-actions">
+            <button className="btn btn-secondary w-full" onClick={() => { toggleTheme(); setMobileMenuOpen(false); }} style={{ marginBottom: '0.5rem' }}>
+              Toggle Theme
+            </button>
             <button className="btn btn-secondary w-full" onClick={() => { onLoginClick(); setMobileMenuOpen(false); }}>
               College Login
             </button>

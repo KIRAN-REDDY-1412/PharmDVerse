@@ -1,0 +1,147 @@
+/* CollegeAuditLogs.css */
+
+.audit-logs-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: var(--text-color);
+}
+
+.audit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.audit-title-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.audit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 24px;
+  align-items: center;
+}
+
+.search-box.audit-search {
+  flex: 1;
+  min-width: 300px;
+  margin: 0;
+}
+
+.audit-filters {
+  display: flex;
+  gap: 12px;
+}
+
+.audit-filter-select {
+  padding: 8px 12px;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  border-radius: 8px;
+  outline: none;
+}
+
+.audit-table-container {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.audit-row {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.audit-row:hover {
+  background-color: rgba(79, 70, 229, 0.05);
+}
+
+.audit-expanded-details {
+  background-color: var(--bg-color);
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.diff-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diff-header {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.diff-content {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  font-family: monospace;
+  font-size: 0.875rem;
+  white-space: pre-wrap;
+  color: var(--text-color);
+  overflow-x: auto;
+}
+
+.diff-content.old {
+  border-left: 4px solid var(--danger-color);
+}
+
+.diff-content.new {
+  border-left: 4px solid var(--success-color);
+}
+
+.audit-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 16px;
+  grid-column: span 2;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.meta-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.meta-value {
+  font-size: 0.875rem;
+  color: var(--text-color);
+}
+
+.action-badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  display: inline-block;
+}
+
+.action-badge.create { background-color: rgba(16, 185, 129, 0.1); color: #10b981; }
+.action-badge.update { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+.action-badge.delete { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.action-badge.auth { background-color: rgba(139, 92, 246, 0.1); color: #8b5cf6; }

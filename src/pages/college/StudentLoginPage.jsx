@@ -70,7 +70,7 @@ const StudentLoginPage = () => {
               <input type="checkbox" />
               <span>Remember me</span>
             </label>
-            <a href="#" className="forgot-password">Forgot Password?</a>
+            <a href="/coming-soon" className="forgot-password">Forgot Password?</a>
           </div>
 
           <button type="submit" className="btn btn-primary w-full" style={{ padding: '0.875rem' }}>

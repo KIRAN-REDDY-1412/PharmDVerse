@@ -1,4 +1,20 @@
-.student-modal {
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 2rem;
+  backdrop-filter: blur(4px);
+}
+
+.preceptor-modal,
+.modal-content {
   background-color: var(--bg-surface);
   border-radius: 12px;
   width: 100%;
@@ -15,9 +31,7 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Reuse modal-overlay from preceptor */
-
-.student-modal .modal-header {
+.modal-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -25,134 +39,174 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-.student-modal .modal-body {
-  padding: 1.5rem 2rem 2rem;
-  overflow-y: auto;
-  display: flex;
-  gap: 2.5rem;
-}
-
-.student-modal .form-main {
-  flex: 1;
-}
-
-/* Section Headings */
-.form-section {
-  margin-bottom: 1.75rem;
-}
-
-.form-section:last-child {
-  margin-bottom: 0;
-}
-
-.section-heading {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 1.25rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.section-icon {
-  font-size: 1.1rem;
-}
-
-/* Two-column grid */
-.section-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.25rem;
-}
-
-.section-grid .form-group.full-width {
-  grid-column: 1 / -1;
-}
-
-/* Toggle Switch */
-.toggle-container {
+.modal-title-group {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 48px;
-  height: 26px;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.toggle-slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background-color: #ccc;
-  border-radius: 26px;
-  transition: 0.3s;
-}
-
-.toggle-slider::before {
-  content: '';
-  position: absolute;
-  height: 20px;
-  width: 20px;
-  left: 3px;
-  bottom: 3px;
-  background-color: white;
-  border-radius: 50%;
-  transition: 0.3s;
-}
-
-.toggle-switch input:checked + .toggle-slider {
-  background-color: #10b981;
-}
-
-.toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(22px);
-}
-
-.toggle-label {
-  font-size: 0.9rem;
-  font-weight: 600;
+.modal-title-icon {
   color: var(--text-primary);
 }
 
-.toggle-label.active-label {
-  color: #10b981;
+.modal-title-text h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
 }
 
-.toggle-label.inactive-label {
-  color: #ef4444;
+.modal-title-text p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
 }
 
-/* Photo Upload - right column */
-.student-photo-section {
+.close-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.close-button:hover {
+  background-color: var(--bg-surface-alt);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 2rem;
+  overflow-y: auto;
+  display: flex;
+  gap: 2.5rem;
+}
+
+.form-fields-container {
+  flex: 1;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  row-gap: 1.5rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: flex;
+}
+
+.required-asterisk {
+  color: var(--color-red);
+  margin-left: 0.25rem;
+}
+
+.form-control-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(15, 76, 129, 0.1);
+}
+
+.form-control.error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-control.read-only {
+  background-color: var(--bg-surface-alt);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+select.form-control {
+  appearance: none;
+  padding-right: 2.5rem;
+  cursor: pointer;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 1rem;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.password-toggle:hover {
+  color: var(--text-primary);
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+/* Photo Upload Section */
+.photo-upload-section {
   width: 200px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  padding-top: 0.5rem;
 }
 
-.student-photo-section .photo-upload-label {
+.photo-upload-label {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-primary);
-  align-self: center;
+  align-self: flex-start;
 }
 
-.student-photo-box {
+.photo-preview-box {
   width: 100%;
   height: 200px;
   background-color: var(--bg-surface-alt);
@@ -162,30 +216,23 @@
   justify-content: center;
   position: relative;
   overflow: hidden;
-  border: 2px dashed var(--border-color);
-  cursor: pointer;
-  transition: border-color 0.2s;
 }
 
-.student-photo-box:hover {
-  border-color: var(--color-primary);
+.photo-placeholder-icon {
+  color: var(--text-secondary);
+  opacity: 0.5;
+  margin-top: 2rem;
 }
 
-.student-photo-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.photo-camera-btn {
+.photo-upload-btn {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  bottom: -10px;
+  right: -10px;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 50%;
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -195,43 +242,251 @@
   transition: all 0.2s;
 }
 
-.photo-camera-btn:hover {
+.photo-upload-btn:hover {
   background-color: var(--bg-surface-alt);
 }
 
-.photo-formats {
-  font-size: 0.7rem;
+.photo-hint {
+  font-size: 0.75rem;
   color: var(--text-secondary);
   text-align: center;
+  margin-top: 0.5rem;
 }
 
-/* Validation error */
-.field-error {
+/* Preceptor Summary Card */
+.preceptor-summary-card {
+  background-color: var(--bg-surface-alt);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  width: 100%;
+}
+
+.summary-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.status-pill {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
   font-size: 0.75rem;
-  color: #ef4444;
-  margin-top: 0.25rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
-/* Footer */
-.student-modal .modal-footer {
-  padding: 1.25rem 2rem;
+.status-active {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.status-inactive {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.modal-footer {
+  padding: 1.5rem 2rem;
   border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: center;
   gap: 1rem;
 }
 
+.btn-cancel, .btn-reset {
+  padding: 0.6rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-cancel {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-cancel:hover {
+  background-color: var(--bg-surface-alt);
+}
+
+.btn-reset {
+  background-color: transparent;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+.btn-reset:hover {
+  background-color: rgba(15, 76, 129, 0.05);
+}
+
+.btn-save {
+  padding: 0.6rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background-color: #0b57d0;
+  color: white;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.btn-save:hover {
+  background-color: #0842a0;
+}
+
 @media (max-width: 900px) {
-  .student-modal .modal-body {
+  .modal-body {
     flex-direction: column-reverse;
   }
-  .student-photo-section {
+  
+  .photo-upload-section {
     align-self: center;
+    margin-bottom: 2rem;
   }
 }
 
 @media (max-width: 600px) {
-  .section-grid {
+  .form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.field-error {
+  color: var(--color-red, #ef4444);
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Enterprise Refinement Classes */
+.modal-layout-split {
+  display: flex;
+  gap: 2rem;
+  width: 100%;
+}
+.modal-form-side {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+.modal-summary-side {
+  flex: 1;
+}
+.form-section {
+  background: var(--bg-surface-alt);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed var(--border-color);
+}
+.save-status-indicator {
+  display: flex;
+  align-items: center;
+}
+.status-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.status-text.validating { color: var(--color-warning); }
+.status-text.loading { color: var(--color-primary); }
+.status-text.success { color: var(--color-success); }
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0,0,0,0.1);
+  border-left-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+.completion-bar-container {
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: var(--bg-surface);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+.btn-replace-photo, .btn-remove-photo {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+.btn-replace-photo input[type="file"] { display: none; }
+.btn-replace-photo:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.btn-remove-photo:hover { border-color: var(--color-danger); color: var(--color-danger); }
+.photo-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+
+/* Enterprise Footer Actions Overrides */
+.enterprise-footer-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  width: 100% !important;
+}
+
+.enterprise-footer-actions button {
+  flex: 0 1 auto !important;
+  width: auto !important;
+  min-width: 120px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
 }

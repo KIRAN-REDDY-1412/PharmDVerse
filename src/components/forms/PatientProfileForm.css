@@ -1,10 +1,9 @@
 .patient-profile-workspace {
   display: flex;
-  height: calc(100vh - 120px);
   background-color: var(--bg-main);
   border-radius: 12px;
-  overflow: hidden;
   border: 1px solid var(--border-color);
+  align-items: flex-start;
 }
 
 .workspace-sidebar {
@@ -13,6 +12,9 @@
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: 1.5rem;
+  max-height: calc(100vh - 3rem);
   overflow-y: auto;
 }
 
@@ -103,7 +105,6 @@
   background-color: var(--bg-surface);
   display: flex;
   flex-direction: column;
-  overflow-y: auto;
 }
 
 .workspace-content-header {
@@ -125,9 +126,12 @@
   margin: 0;
 }
 
-.workspace-content-body {
+.workspace-main, .workspace-content-body {
   padding: 2rem;
-  max-width: 900px;
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0;
+  box-sizing: border-box;
 }
 
 /* Form Styles */
@@ -149,6 +153,18 @@
   gap: 1.5rem;
 }
 
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.form-row > .form-group {
+  flex-grow: 1;
+  /* basis/flex values will be set inline per field */
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
@@ -167,6 +183,8 @@
 }
 
 .form-input, .form-select, .form-textarea {
+  width: 100%;
+  box-sizing: border-box;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -215,7 +233,9 @@
 
 /* Dynamic Tables */
 .dynamic-table-container {
-  width: 100%;
+  width: 100% !important;
+  max-width: none !important;
+  display: block;
   overflow-x: auto;
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -223,7 +243,7 @@
 }
 
 .dynamic-table {
-  width: 100%;
+  width: 100% !important;
   border-collapse: collapse;
 }
 
@@ -250,6 +270,7 @@
 
 .table-input {
   width: 100%;
+  min-width: 0 !important;
   padding: 0.5rem 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 6px;
@@ -346,6 +367,7 @@
   grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 1rem;
   align-items: center;
+  width: 100%;
   padding: 1rem 0;
   border-bottom: 1px solid var(--border-color);
 }

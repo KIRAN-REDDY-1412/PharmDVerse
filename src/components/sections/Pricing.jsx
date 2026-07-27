@@ -1,5 +1,6 @@
 import React from 'react';
-import { Check } from 'lucide-react';
+import { Check, Users, Database, BrainCircuit, HeadphonesIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import './Pricing.css';
 
 const pricingPlans = [
@@ -8,48 +9,60 @@ const pricingPlans = [
     price: '$5,000',
     period: '/year',
     description: 'Perfect for small pharmacy colleges.',
+    limits: {
+      students: 'Up to 500 Students',
+      storage: '50GB Secure Storage',
+      ai: 'Standard AI Analysis',
+      support: 'Email Support'
+    },
     features: [
-      'Up to 500 Students',
       'Basic Clinical Case Management',
-      'Standard AI Analysis',
-      'Email Support',
+      'Preceptor Dashboards',
+      'Standard Reporting'
     ],
-    recommended: false,
-    buttonText: 'Get Started'
+    recommended: false
   },
   {
     name: 'Professional',
     price: '$12,000',
     period: '/year',
     description: 'Ideal for medium to large institutions.',
+    limits: {
+      students: 'Up to 2,000 Students',
+      storage: '250GB Secure Storage',
+      ai: 'Unlimited AI SOAP Generation',
+      support: 'Priority Support'
+    },
     features: [
-      'Up to 2,000 Students',
       'Advanced Clinical Workflow',
-      'Unlimited AI SOAP Generation',
       'Preceptor Approval Chains',
-      'Priority Support',
+      'Custom Analytics & Export'
     ],
-    recommended: true,
-    buttonText: 'Most Popular'
+    recommended: true
   },
   {
     name: 'Enterprise',
     price: 'Custom',
-    period: '',
+    period: '/year',
     description: 'For university systems and multi-campus setups.',
+    limits: {
+      students: 'Unlimited Students',
+      storage: 'Unlimited Storage',
+      ai: 'Custom AI Model Training',
+      support: '24/7 Phone Support'
+    },
     features: [
-      'Unlimited Students',
       'Custom Integrations (LMS, EHR)',
       'Dedicated Account Manager',
-      'White-label Options',
-      '24/7 Phone Support',
+      'White-label Options'
     ],
-    recommended: false,
-    buttonText: 'Contact Sales'
+    recommended: false
   }
 ];
 
 const Pricing = () => {
+  const navigate = useNavigate();
+
   return (
     <section id="pricing" className="pricing-section section-padding">
       <div className="container">
@@ -77,6 +90,25 @@ const Pricing = () => {
                 </div>
               </div>
 
+              <div className="pricing-limits" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--border-color)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Users size={16} className="text-primary" />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{plan.limits.students}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Database size={16} className="text-primary" />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{plan.limits.storage}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <BrainCircuit size={16} className="text-primary" />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{plan.limits.ai}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <HeadphonesIcon size={16} className="text-primary" />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>{plan.limits.support}</span>
+                </div>
+              </div>
+
               <div className="pricing-features">
                 <ul>
                   {plan.features.map((feature, i) => (
@@ -88,8 +120,11 @@ const Pricing = () => {
                 </ul>
               </div>
 
-              <button className={`btn w-full ${plan.recommended ? 'btn-accent' : 'btn-secondary'}`}>
-                {plan.buttonText}
+              <button 
+                className={`btn w-full ${plan.recommended ? 'btn-accent' : 'btn-secondary'}`}
+                onClick={() => navigate('/register-college')}
+              >
+                Register College
               </button>
             </div>
           ))}

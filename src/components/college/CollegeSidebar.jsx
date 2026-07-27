@@ -13,7 +13,8 @@ import {
   LogOut, 
   ChevronLeft, 
   ChevronRight, 
-  Stethoscope
+  Stethoscope,
+  HelpCircle
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './CollegeSidebar.css';
@@ -24,13 +25,14 @@ const MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/college-admin/dashboard' },
   { id: 'preceptors', label: 'Preceptor Management', icon: UserCog, path: '/college-admin/preceptors' },
   { id: 'students', label: 'Student Management', icon: Users, path: '/college-admin/students' },
-  { id: 'assign-students', label: 'Assign Students', icon: UserPlus, path: '/college-admin/assign-students' },
-  { id: 'cases', label: 'Clinical Case Management', icon: ClipboardList, path: '/college-admin/cases' },
+  { id: 'assign-students', label: 'Student–Preceptor Assignment', icon: UserPlus, path: '/college-admin/assign-students' },
+  { id: 'cases', label: 'Clinical Cases', icon: ClipboardList, path: '/college-admin/cases' },
   { id: 'reports', label: 'Reports', icon: BarChart3, path: '/college-admin/reports' },
   { id: 'notifications', label: 'Notifications', icon: Bell, path: '/college-admin/notifications' },
   { type: 'divider', id: 'div-1' },
   { id: 'profile', label: 'My Profile', icon: UserCircle, path: '/college-admin/profile' },
   { id: 'settings', label: 'Settings', icon: Settings, path: '/college-admin/settings' },
+  { id: 'support', label: 'Help & Support', icon: HelpCircle, path: '/college-admin/support' },
 ];
 
 const CollegeSidebar = () => {
@@ -85,14 +87,7 @@ const CollegeSidebar = () => {
           
           const isActive = location.pathname === item.path || 
                            (item.id === 'dashboard' && location.pathname === '/college-admin') ||
-                           (item.id === 'preceptors' && location.pathname.startsWith('/college-admin/preceptor')) ||
-                           (item.id === 'students' && location.pathname.startsWith('/college-admin/student') && !location.pathname.startsWith('/college-admin/assign-students')) ||
-                           (item.id === 'assign-students' && location.pathname.startsWith('/college-admin/assign-students')) ||
-                           (item.id === 'cases' && location.pathname.startsWith('/college-admin/case')) ||
-                           (item.id === 'reports' && location.pathname.startsWith('/college-admin/reports')) ||
-                           (item.id === 'profile' && location.pathname.startsWith('/college-admin/profile')) ||
-                           (item.id === 'notifications' && location.pathname.startsWith('/college-admin/notifications')) ||
-                           (item.id === 'settings' && location.pathname.startsWith('/college-admin/settings'));
+                           (item.id !== 'dashboard' && location.pathname.startsWith(item.path));
           const Icon = item.icon;
 
           return (
@@ -118,6 +113,9 @@ const CollegeSidebar = () => {
         >
           <LogOut className="nav-icon" size={20} />
           <span className="nav-label">Logout</span>
+        </div>
+        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '0.75rem', fontWeight: 600 }}>
+          PharmDVerse ERP v2.1.0
         </div>
       </div>
       

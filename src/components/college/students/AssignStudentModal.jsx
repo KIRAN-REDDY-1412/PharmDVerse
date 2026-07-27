@@ -1,17 +1,17 @@
 import React, { useState } from 'react';
 import { X, Save, UserPlus, ChevronDown } from 'lucide-react';
+import { useDatabase } from '../../../context/DatabaseContext';
 import '../preceptor/AddPreceptorModal.css';
 import '../student/AddStudentModal.css';
 
-const MOCK_STUDENTS = [
-  { rollNumber: 'Y26PHD0301', name: 'John Doe', course: 'Pharm.D', batch: 'Y26', year: 'IV Year', academicYear: '2026-2027' },
-  { rollNumber: 'Y26PHD0302', name: 'Jane Smith', course: 'Pharm.D', batch: 'Y26', year: 'IV Year', academicYear: '2026-2027' },
-];
-
 const AssignStudentModal = ({ isOpen, onClose }) => {
+  const { users, updateUser } = useDatabase();
+  const students = users.filter(u => u.role === 'student');
+  const preceptors = users.filter(u => u.role === 'preceptor');
+
   const [formData, setFormData] = useState({
-    rollNumber: '',
-    assignedPreceptor: ''
+    studentId: '',
+    assignedPreceptorId: ''
   });
   
   const [studentDetails, setStudentDetails] = useState({
@@ -24,31 +24,30 @@ const AssignStudentModal = ({ isOpen, onClose }) => {
 
   const [errors, setErrors] = useState({});
 
-  const handleRollNumberChange = (e) => {
+  const handleStudentSelect = (e) => {
     const value = e.target.value;
-    setFormData(prev => ({ ...prev, rollNumber: value }));
+    setFormData(prev => ({ ...prev, studentId: value }));
     
-    // Mock auto-fill logic
-    const student = MOCK_STUDENTS.find(s => s.rollNumber === value);
+    const student = students.find(s => s.id === value);
     if (student) {
       setStudentDetails({
-        name: student.name,
-        course: student.course,
-        batch: student.batch,
-        year: student.year,
-        academicYear: student.academicYear
+        name: student.name || student.fullName || '',
+        course: student.course || '',
+        batch: student.batch || '',
+        year: student.year || '',
+        academicYear: student.academicYear || ''
       });
+      if (student.assignedPreceptorId) {
+        setFormData(prev => ({ ...prev, assignedPreceptorId: student.assignedPreceptorId }));
+      } else {
+        setFormData(prev => ({ ...prev, assignedPreceptorId: '' }));
+      }
     } else {
-      setStudentDetails({
-        name: '',
-        course: '',
-        batch: '',
-        year: '',
-        academicYear: ''
-      });
+      setStudentDetails({ name: '', course: '', batch: '', year: '', academicYear: '' });
+      setFormData(prev => ({ ...prev, assignedPreceptorId: '' }));
     }
 
-    if (errors.rollNumber) setErrors(prev => ({ ...prev, rollNumber: '' }));
+    if (errors.studentId) setErrors(prev => ({ ...prev, studentId: '' }));
   };
 
   const handleChange = (e) => {
@@ -59,14 +58,15 @@ const AssignStudentModal = ({ isOpen, onClose }) => {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.rollNumber) newErrors.rollNumber = 'Required';
-    if (!formData.assignedPreceptor) newErrors.assignedPreceptor = 'Required';
+    if (!formData.studentId) newErrors.studentId = 'Required';
+    if (!formData.assignedPreceptorId) newErrors.assignedPreceptorId = 'Required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = () => {
     if (validate()) {
+      updateUser(formData.studentId, { assignedPreceptorId: formData.assignedPreceptorId });
       alert('Student assigned successfully!');
       handleReset();
       onClose();
@@ -74,7 +74,7 @@ const AssignStudentModal = ({ isOpen, onClose }) => {
   };
 
   const handleReset = () => {
-    setFormData({ rollNumber: '', assignedPreceptor: '' });
+    setFormData({ studentId: '', assignedPreceptorId: '' });
     setStudentDetails({ name: '', course: '', batch: '', year: '', academicYear: '' });
     setErrors({});
   };
@@ -83,7 +83,7 @@ const AssignStudentModal = ({ isOpen, onClose }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="student-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '900px' }}>
+      <div className="student-modal-container" onClick={e => e.stopPropagation()} style={{ maxWidth: '900px' }}>
         
         {/* Header */}
         <div className="modal-header">
@@ -112,16 +112,17 @@ const AssignStudentModal = ({ isOpen, onClose }) => {
                 </div>
                 
                 <div className="form-group">
-                  <label>Roll Number <span className="required-asterisk">*</span></label>
+                  <label>Select Student <span className="required-asterisk">*</span></label>
                   <div className="form-control-wrapper">
-                    <select className={`form-control ${errors.rollNumber ? 'error' : ''}`} name="rollNumber" value={formData.rollNumber} onChange={handleRollNumberChange}>
-                      <option value="">Select Roll Number</option>
-                      <option value="Y26PHD0301">Y26PHD0301</option>
-                      <option value="Y26PHD0302">Y26PHD0302</option>
+                    <select className={`form-control ${errors.studentId ? 'error' : ''}`} name="studentId" value={formData.studentId} onChange={handleStudentSelect}>
+                      <option value="">Select Student</option>
+                      {students.map(s => (
+                        <option key={s.id} value={s.id}>{s.id} - {s.name || s.fullName}</option>
+                      ))}
                     </select>
                     <ChevronDown size={16} className="select-arrow" />
                   </div>
-                  {errors.rollNumber && <span className="field-error">{errors.rollNumber}</span>}
+                  {errors.studentId && <span className="field-error">{errors.studentId}</span>}
                 </div>
 
                 <div className="form-group">
@@ -158,14 +159,15 @@ const AssignStudentModal = ({ isOpen, onClose }) => {
                 <div className="form-group">
                   <label>Assigned Preceptor <span className="required-asterisk">*</span></label>
                   <div className="form-control-wrapper">
-                    <select className={`form-control ${errors.assignedPreceptor ? 'error' : ''}`} name="assignedPreceptor" value={formData.assignedPreceptor} onChange={handleChange}>
+                    <select className={`form-control ${errors.assignedPreceptorId ? 'error' : ''}`} name="assignedPreceptorId" value={formData.assignedPreceptorId} onChange={handleChange}>
                       <option value="">Select Preceptor</option>
-                      <option value="Dr. Sarah Jenkins">Dr. Sarah Jenkins (Pharmacy Practice)</option>
-                      <option value="Dr. Michael Chen">Dr. Michael Chen (Pharmacology)</option>
+                      {preceptors.map(p => (
+                        <option key={p.id} value={p.id}>{p.name || p.fullName} ({p.department || p.dept})</option>
+                      ))}
                     </select>
                     <ChevronDown size={16} className="select-arrow" />
                   </div>
-                  {errors.assignedPreceptor && <span className="field-error">{errors.assignedPreceptor}</span>}
+                  {errors.assignedPreceptorId && <span className="field-error">{errors.assignedPreceptorId}</span>}
                 </div>
                 
                 <div style={{ marginTop: '2rem', padding: '1rem', backgroundColor: 'var(--bg-surface-alt)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>

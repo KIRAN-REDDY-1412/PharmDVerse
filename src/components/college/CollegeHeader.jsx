@@ -1,10 +1,12 @@
 import React from 'react';
-import { Search, Bell, Moon, Sun } from 'lucide-react';
+import { Search, Bell, Moon, Sun, User } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
 import './CollegeHeader.css';
 
 const CollegeHeader = () => {
   const { isDarkMode, toggleTheme } = useTheme();
+  const { currentUser } = useAuth();
 
   return (
     <header className="college-header">
@@ -21,7 +23,7 @@ const CollegeHeader = () => {
           <Search className="search-icon" size={16} />
           <input 
             type="text" 
-            placeholder="Search for students, cases, preceptors..." 
+            placeholder="Search students, preceptors, clinical cases..." 
             aria-label="Search"
           />
         </div>
@@ -41,6 +43,14 @@ const CollegeHeader = () => {
             </div>
             <Moon size={16} color="var(--text-secondary)" />
           </div>
+
+          {currentUser?.profilePhoto ? (
+            <img src={currentUser.profilePhoto} alt="Profile" className="header-profile-photo" />
+          ) : (
+            <div className="header-profile-photo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-surface-alt)' }}>
+              <User size={20} color="var(--text-secondary)" />
+            </div>
+          )}
         </div>
       </div>
       

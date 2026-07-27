@@ -14,7 +14,7 @@ const CaseAnalytics = () => {
           <div className="breadcrumbs">
             <Link to="/college-admin/dashboard" className="breadcrumb-link">Dashboard</Link>
             <span className="breadcrumb-separator">&gt;</span>
-            <Link to="/college-admin/cases" className="breadcrumb-link">Clinical Case Management</Link>
+            <Link to="/college-admin/cases" className="breadcrumb-link">Clinical Cases</Link>
             <span className="breadcrumb-separator">&gt;</span>
             <span>Case Analytics</span>
           </div>

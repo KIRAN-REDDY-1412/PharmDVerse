@@ -1,13 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, Save, Send, User, AlertCircle, FileText, Activity, CheckCircle2, ShieldAlert, FileWarning, HelpCircle, UserPlus, Plus, Trash2 } from 'lucide-react';
-import StudentLayout from '../../components/student/StudentLayout';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ChevronRight, ChevronLeft, Save, Send, User, AlertCircle, FileText, Activity, CheckCircle2, ShieldAlert, FileWarning, HelpCircle, UserPlus, Plus, Trash2, AlertTriangle, Pill } from 'lucide-react';
+import StudentLayout from '../student/StudentLayout';
+import CollegeAdminLayout from '../college/CollegeAdminLayout';
+import AdminLayout from '../admin/AdminLayout';
 import { useDatabase } from '../../context/DatabaseContext';
+import '../../pages/college/PreceptorManagement.css';
 import './PatientProfileForm.css';
 
-const ADRForm = () => {
+const ADRForm = ({ role = 'student' }) => {
   const navigate = useNavigate();
-  const { submitCase, saveDraftCase } = useDatabase();
+  const { id } = useParams();
+  const { cases, submitCase, saveDraftCase, updateFormStatus } = useDatabase();
+
+  const isAdmin = role === 'admin';
+  const isPreceptor = role === 'preceptor';
+  const isSuperAdmin = role === 'superadmin';
+  const Layout = (isPreceptor || isAdmin || isSuperAdmin) ? React.Fragment : StudentLayout;
+  
+  const existingCase = id ? cases.find(c => c.id === id) : null;
+  const isLocked = isPreceptor || isAdmin || isSuperAdmin || (existingCase && ['Approved', 'Submitted', 'Under Review'].includes(existingCase.status));
+  
+  let dashboardPath = '/student/dashboard';
+  let backPath = '/student/new-case';
+  let backText = 'New Case';
+
+  if (isPreceptor) {
+    dashboardPath = '/preceptor/dashboard';
+    backPath = `/preceptor/cases/view/${id}`;
+    backText = 'Review Case';
+  } else if (isSuperAdmin) {
+    dashboardPath = '/super-admin/dashboard';
+    backPath = `/super-admin/cases/view/${id}`;
+    backText = 'View Case';
+  } else if (isAdmin) {
+    dashboardPath = '/college-admin/dashboard';
+    backPath = `/college-admin/cases/view/${id}`;
+    backText = 'View Case';
+  } else if (id) {
+    backPath = `/student/cases/view/${id}`;
+    backText = 'View Case';
+  }
+
+  const formStatus = existingCase?.forms?.adr?.status || 'Pending';
+  const [preceptorComments, setPreceptorComments] = useState(existingCase?.forms?.adr?.comments || '');
+  const isReturned = existingCase && existingCase.status === 'Returned';
   
   // Section Navigation
   const [activeSection, setActiveSection] = useState(1);
@@ -21,6 +58,16 @@ const ADRForm = () => {
 
   const handleNext = () => { if (activeSection < sections.length) setActiveSection(prev => prev + 1); };
   const handlePrev = () => { if (activeSection > 1) setActiveSection(prev => prev - 1); };
+
+  // Scroll content to top when section changes
+  const contentBodyRef = useRef(null);
+  useEffect(() => {
+    if (contentBodyRef.current) {
+      contentBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeSection]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -196,18 +243,10 @@ const ADRForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (isPreceptor) return;
     setIsSubmitting(true);
-    submitCase({
-      docType: 'Adverse Drug Reaction',
-      patientName: formData.patientInitials || 'Unknown',
-      age: formData.age || 'Unknown',
-      gender: formData.gender || 'Unknown',
-      diagnosis: formData.reactionDescription || 'Not specified',
-      hospital: 'City General Hospital',
-      department: 'N/A',
-      ...formData
-    });
+    submitCase({ docType: 'Adverse Drug Reaction', ...formData });
     setTimeout(() => {
       setIsSubmitting(false);
       navigate('/student/cases/submitted');
@@ -215,21 +254,14 @@ const ADRForm = () => {
   };
 
   const handleSaveDraft = () => {
-    saveDraftCase({
-      docType: 'Adverse Drug Reaction',
-      patientName: formData.patientInitials || 'Unknown',
-      age: formData.age || 'Unknown',
-      gender: formData.gender || 'Unknown',
-      diagnosis: formData.reactionDescription || 'Not specified',
-      hospital: 'City General Hospital',
-      department: 'N/A',
-      ...formData
-    });
+    if (isPreceptor) return;
+    saveDraftCase({ docType: 'Adverse Drug Reaction', ...formData });
     alert("Draft saved successfully!");
   };
 
   return (
-    <StudentLayout>
+    <Layout>
+
       <div className="preceptor-page">
         {/* Header */}
         <div className="page-header" style={{ marginBottom: '1rem' }}>
@@ -237,11 +269,11 @@ const ADRForm = () => {
             <h1 className="page-title">Adverse Drug Reaction Reporting</h1>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem' }}>Internal ERP ADR Tracker (Modified from PvPI layout)</p>
             <div className="breadcrumbs" style={{ marginTop: '0.5rem' }}>
-              <Link to="/student/dashboard" className="breadcrumb-link">Dashboard</Link>
+              <Link to={dashboardPath} className="breadcrumb-link">Dashboard</Link>
               <span className="breadcrumb-separator">&gt;</span>
-              <Link to="/student/new-case" className="breadcrumb-link">New Case</Link>
+              <Link to={backPath} className="breadcrumb-link">{backText}</Link>
               <span className="breadcrumb-separator">&gt;</span>
-              <span>ADR Form</span>
+              <span>ADR Reporting</span>
             </div>
           </div>
         </div>
@@ -272,18 +304,30 @@ const ADRForm = () => {
           <div className="workspace-content">
             <div className="workspace-content-header">
               <h1 className="workspace-content-title">{sections.find(s => s.id === activeSection)?.title}</h1>
-              {activeSection !== sections.length && (
-                <button 
-                  className="btn-submit" 
-                  style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-                  onClick={() => setActiveSection(activeSection + 1)}
-                >
-                  Next Section <ChevronRight size={16} />
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {activeSection > 1 && (
+                  <button 
+                    className="btn-secondary" 
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    onClick={handlePrev}
+                  >
+                    <ChevronLeft size={16} /> Previous
+                  </button>
+                )}
+                {activeSection !== sections.length && (
+                  <button 
+                    className="btn-submit" 
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    onClick={handleNext}
+                  >
+                    Next Section <ChevronRight size={16} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="workspace-content-body">
+            <div ref={contentBodyRef} className="workspace-content-body">
+              <fieldset disabled={isLocked} style={{ border: 'none', padding: 0, margin: 0 }}>
               {/* SECTION 1: Patient Information */}
               {activeSection === 1 && (
               <div className="form-section">
@@ -291,22 +335,27 @@ const ADRForm = () => {
                   <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Basic patient metrics are auto-fetched from the Master Patient Profile.</p>
                 </div>
 
-                <div className="form-grid">
-                  <div className="form-group">
+                <div className="form-row">
+                  <div className="form-group" style={{ flex: 1, minWidth: '300px' }}>
                     <label className="form-label">Patient Initials</label>
-                    <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.patientInitials} readOnly />
+                    <input type="text" className="form-input" name="patientInitials" value={formData.patientInitials} onChange={handleInputChange} />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">IPD No / CR No.</label>
-                    <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.ipNumber} readOnly />
+                  <div className="form-group" style={{ flex: 1, minWidth: '100px' }}>
+                    <label className="form-label">Age</label>
+                    <input type="text" className="form-input" name="age" value={formData.age} onChange={handleInputChange} />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Age / Gender</label>
-                    <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={`${formData.age} / ${formData.gender}`} readOnly />
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                    <label className="form-label">Gender</label>
+                    <select className="form-select" name="gender" value={formData.gender} onChange={handleInputChange}>
+                      <option value="">Select</option>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Weight (Kg)</label>
-                    <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.weight} readOnly />
+                  <div className="form-group" style={{ flex: 1, minWidth: '120px' }}>
+                    <label className="form-label">Weight (kg)</label>
+                    <input type="text" className="form-input" name="weight" value={formData.weight} onChange={handleInputChange} />
                   </div>
                 </div>
 
@@ -322,13 +371,13 @@ const ADRForm = () => {
             {activeSection === 2 && (
               <div className="form-section">
                 
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label className="form-label">Event / Reaction Start Date</label>
+                <div className="form-row">
+                  <div className="form-group" style={{ flex: 1, minWidth: '250px' }}>
+                    <label className="form-label">Date of onset of reaction</label>
                     <input type="date" className="form-input" name="reactionStartDate" value={formData.reactionStartDate} onChange={handleInputChange} />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Event / Reaction Stop Date</label>
+                  <div className="form-group" style={{ flex: 1, minWidth: '250px' }}>
+                    <label className="form-label">Date of recovery</label>
                     <input type="date" className="form-input" name="reactionStopDate" value={formData.reactionStopDate} onChange={handleInputChange} />
                   </div>
                 </div>
@@ -507,61 +556,115 @@ const ADRForm = () => {
                   </div>
                   
                   {formData.seriousness === 'Yes' && (
-                    <div className="form-grid-3">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                           <input type="checkbox" name="serious_death" checked={formData.seriousnessType.death} onChange={handleInputChange} /> Death
                         </label>
                         {formData.seriousnessType.death && (
                           <input type="date" className="form-input" name="deathDate" value={formData.deathDate} onChange={handleInputChange} style={{ padding: '0.2rem', fontSize: '0.8rem' }} />
                         )}
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" name="serious_lifeThreatening" checked={formData.seriousnessType.lifeThreatening} onChange={handleInputChange} /> Life threatening
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" name="serious_hospitalization" checked={formData.seriousnessType.hospitalization} onChange={handleInputChange} /> Hospitalization-Initial/Prolonged
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" name="serious_disability" checked={formData.seriousnessType.disability} onChange={handleInputChange} /> Disability
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" name="serious_congenitalAnomaly" checked={formData.seriousnessType.congenitalAnomaly} onChange={handleInputChange} /> Congenital-anomaly
+                        </label>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                          <input type="checkbox" name="serious_otherMedicallyImportant" checked={formData.seriousnessType.otherMedicallyImportant} onChange={handleInputChange} /> Other Medically important
+                        </label>
+                    </div>
+                  )}
+
+                  {formData.seriousness === 'Yes' && (
+                    <div className="form-row" style={{ marginTop: '1rem' }}>
+                      <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                        <label className="form-label">Name</label>
+                        <input type="text" className="form-input" name="reporterName" value={formData.reporterName} onChange={handleInputChange} />
                       </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" name="serious_lifeThreatening" checked={formData.seriousnessType.lifeThreatening} onChange={handleInputChange} /> Life threatening
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" name="serious_hospitalization" checked={formData.seriousnessType.hospitalization} onChange={handleInputChange} /> Hospitalization-Initial/Prolonged
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" name="serious_disability" checked={formData.seriousnessType.disability} onChange={handleInputChange} /> Disability
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" name="serious_congenitalAnomaly" checked={formData.seriousnessType.congenitalAnomaly} onChange={handleInputChange} /> Congenital-anomaly
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
-                        <input type="checkbox" name="serious_otherMedicallyImportant" checked={formData.seriousnessType.otherMedicallyImportant} onChange={handleInputChange} /> Other Medically important
-                      </label>
+                      <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                        <label className="form-label">Profession</label>
+                        <input type="text" className="form-input" name="reporterProfession" value={formData.reporterProfession} onChange={handleInputChange} />
+                      </div>
+                      <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                        <label className="form-label">Contact/Email</label>
+                        <input type="text" className="form-input" name="reporterContact" value={formData.reporterContact} onChange={handleInputChange} />
+                      </div>
                     </div>
                   )}
                 </div>
 
-                <div className="form-grid" style={{ marginBottom: '1.5rem' }}>
-                  <div className="form-group">
+                <div className="form-row" style={{ marginBottom: '1.5rem' }}>
+                  <div className="form-group" style={{ flex: 1, minWidth: '250px' }}>
+                    <label className="form-label">Reaction managed</label>
+                    <input type="text" className="form-input" name="reactionManaged" value={formData.reactionManaged} onChange={handleInputChange} placeholder="Describe management" />
+                  </div>
+                  <div className="form-group" style={{ flex: 1, minWidth: '250px' }}>
+                    <label className="form-label">Patient outcome</label>
+                    <input type="text" className="form-input" name="patientOutcome" value={formData.patientOutcome} onChange={handleInputChange} placeholder="Recovered, continuing, fatal..." />
+                  </div>
+                </div>
+
+                <div className="form-row" style={{ marginTop: '0.5rem' }}>
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                    <label className="form-label">Naranjo Score</label>
+                    <input type="text" className="form-input" name="naranjoScore" value={formData.naranjoScore} onChange={handleInputChange} placeholder="0-10+" />
+                  </div>
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                    <label className="form-label">WHO Causality</label>
+                    <select className="form-select" name="whoCausality" value={formData.whoCausality} onChange={handleInputChange}>
+                      <option value="">Select</option>
+                      <option value="Certain">Certain</option>
+                      <option value="Probable">Probable</option>
+                      <option value="Possible">Possible</option>
+                      <option value="Unlikely">Unlikely</option>
+                      <option value="Conditional">Conditional</option>
+                      <option value="Unassessable">Unassessable</option>
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                    <label className="form-label">Schumock & Thornton</label>
+                    <select className="form-select" name="preventability" value={formData.preventability} onChange={handleInputChange}>
+                      <option value="">Select Preventability</option>
+                      <option value="Definitely Preventable">Definitely Preventable</option>
+                      <option value="Probably Preventable">Probably Preventable</option>
+                      <option value="Not Preventable">Not Preventable</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="form-row" style={{ marginBottom: '1.5rem' }}>
+                  <div className="form-group" style={{ flex: 1 }}>
                     <label className="form-label">Outcome</label>
-                    <div className="form-grid-3" style={{ marginTop: '0.5rem' }}>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <div className="form-row" style={{ marginTop: '0.5rem' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flex: 1, minWidth: '150px' }}>
                         <input type="radio" name="outcome" value="Recovered" checked={formData.outcome === 'Recovered'} onChange={handleInputChange} /> Recovered
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flex: 1, minWidth: '150px' }}>
                         <input type="radio" name="outcome" value="Recovering" checked={formData.outcome === 'Recovering'} onChange={handleInputChange} /> Recovering
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flex: 1, minWidth: '150px' }}>
                         <input type="radio" name="outcome" value="Not Recovered" checked={formData.outcome === 'Not Recovered'} onChange={handleInputChange} /> Not Recovered
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flex: 1, minWidth: '150px' }}>
                         <input type="radio" name="outcome" value="Fatal" checked={formData.outcome === 'Fatal'} onChange={handleInputChange} /> Fatal
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flex: 1, minWidth: '150px' }}>
                         <input type="radio" name="outcome" value="Recovered with sequelae" checked={formData.outcome === 'Recovered with sequelae'} onChange={handleInputChange} /> Recovered with sequelae
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', flex: 1, minWidth: '150px' }}>
                         <input type="radio" name="outcome" value="Unknown" checked={formData.outcome === 'Unknown'} onChange={handleInputChange} /> Unknown
                       </label>
                     </div>
                   </div>
                 </div>
 
-                <div className="form-group">
+                <div className="form-group" style={{ marginTop: '1.5rem' }}>
                   <label className="form-label">Additional Information</label>
                   <textarea className="form-textarea" name="additionalInfo" value={formData.additionalInfo} onChange={handleInputChange} onBlur={handleBlur} placeholder="Any other relevant clinical observations..."></textarea>
                 </div>
@@ -578,26 +681,31 @@ const ADRForm = () => {
                 
                 <div className="review-section" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px' }}>
                   <h3 className="review-section-title" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>Documentation Summary</h3>
-                  <div className="review-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                    {Object.entries(formData).map(([key, value]) => {
-                      if (typeof value === 'object' && value !== null) return null; // Skip complex arrays in summary
-                      if (key.includes('serious_')) {
-                        if (value !== true) return null; // Only show checked items for long checklists
-                      }
-                      
-                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
-                      const displayValue = value === true ? 'Yes' : value === false ? 'No' : value || '-';
-                      
-                      return (
-                        <div key={key} className="review-item">
-                          <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{label}</span>
-                          <span style={{ display: 'block', fontWeight: 500, color: value ? 'var(--text-main)' : 'var(--text-secondary)' }}>
-                            {displayValue}
-                          </span>
-                        </div>
-                      );
-                    })}
+                  
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>ADR Report Details</h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--border-color)' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--bg-surface)' }}>
+                          <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border-color)', width: '30%', color: 'var(--text-secondary)' }}>Field</th>
+                          <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>Entered Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Reaction Start Date</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.reactionStartDate || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Reaction Stop Date</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.reactionStopDate || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Description</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.reactionDescription || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Seriousness</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.seriousness}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Outcome</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.outcome || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Patient Outcome</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.patientOutcome || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Reaction Managed</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.reactionManaged || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Naranjo Score</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.naranjoScore || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>WHO Causality</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.whoCausality || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Schumock & Thornton</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.preventability || '-'}</td></tr>
+                      </tbody>
+                    </table>
                   </div>
+
                 </div>
                 
                 <div className="workspace-actions">
@@ -608,12 +716,26 @@ const ADRForm = () => {
                 </div>
               </div>
             )}
-
+              </fieldset>
             </div> {/* End workspace-content-body */}
+          <div className="case-content-header" style={{ marginLeft: '1.5rem', marginTop: '1.5rem', marginRight: '1.5rem' }}>
+            {isPreceptor && (
+              <div style={{ backgroundColor: '#fff8e1', border: '1px solid #ffe082', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.85rem', color: '#8f6b00', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <AlertCircle size={16} /> Read-Only Mode (Student Data)
+              </div>
+            )}
           </div>
-        </div>
+          
+          <div className="case-content-body custom-scrollbar" style={{ flex: 1, overflowY: 'auto' }}>
+            <fieldset disabled={isLocked} style={{ border: 'none', padding: 0, margin: 0 }}>
+              {/* Wrapped implicitly */}
+            </fieldset>
+          </div>
+
+        </div> {/* End workspace-content */}
       </div>
-    </StudentLayout>
+      </div>
+    </Layout>
   );
 };
 

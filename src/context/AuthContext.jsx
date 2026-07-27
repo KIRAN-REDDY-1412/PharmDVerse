@@ -19,10 +19,14 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('erp_currentUser', JSON.stringify(currentUser));
   }, [currentUser]);
 
-  const login = (role) => {
-    const user = INITIAL_USERS.find(u => u.role === role);
-    if (user) {
-      setCurrentUser(user);
+  const login = (userOrRole) => {
+    if (typeof userOrRole === 'object' && userOrRole !== null) {
+      setCurrentUser(userOrRole);
+    } else {
+      const user = INITIAL_USERS.find(u => u.role === userOrRole);
+      if (user) {
+        setCurrentUser(user);
+      }
     }
   };
 
@@ -32,7 +36,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ currentUser, login, logout }}>
+    <AuthContext.Provider value={{ currentUser, setCurrentUser, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

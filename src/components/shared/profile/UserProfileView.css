@@ -65,6 +65,17 @@
   padding: 2rem;
 }
 
+.profile-section-title {
+  grid-column: 1 / -1;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 0.5rem;
+  margin-top: 1rem;
+  margin-bottom: -1rem; /* counteract grid gap */
+}
+
 .detail-group {
   display: flex;
   flex-direction: column;

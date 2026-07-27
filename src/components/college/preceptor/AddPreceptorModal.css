@@ -13,7 +13,8 @@
   backdrop-filter: blur(4px);
 }
 
-.preceptor-modal {
+.preceptor-modal,
+.modal-content {
   background-color: var(--bg-surface);
   border-radius: 12px;
   width: 100%;
@@ -191,6 +192,7 @@ select.form-control {
 /* Photo Upload Section */
 .photo-upload-section {
   width: 200px;
+  margin: 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -249,6 +251,66 @@ select.form-control {
   color: var(--text-secondary);
   text-align: center;
   margin-top: 0.5rem;
+}
+
+/* Preceptor Summary Card */
+.preceptor-summary-card {
+  background-color: var(--bg-surface-alt);
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  width: 100%;
+}
+
+.summary-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.summary-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.summary-value {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.status-pill {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.status-active {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.status-inactive {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .modal-footer {
@@ -322,4 +384,109 @@ select.form-control {
   .form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.field-error {
+  color: var(--color-red, #ef4444);
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+/* Enterprise Refinement Classes */
+.modal-layout-split {
+  display: flex;
+  gap: 2rem;
+  width: 100%;
+}
+.modal-form-side {
+  flex: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+.modal-summary-side {
+  flex: 1;
+}
+.form-section {
+  background: var(--bg-surface-alt);
+  padding: 1.5rem;
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+}
+.section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px dashed var(--border-color);
+}
+.save-status-indicator {
+  display: flex;
+  align-items: center;
+}
+.status-text {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.status-text.validating { color: var(--color-warning); }
+.status-text.loading { color: var(--color-primary); }
+.status-text.success { color: var(--color-success); }
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(0,0,0,0.1);
+  border-left-color: currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { 100% { transform: rotate(360deg); } }
+.completion-bar-container {
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: var(--bg-surface);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+.btn-replace-photo, .btn-remove-photo {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+.btn-replace-photo input[type="file"] { display: none; }
+.btn-replace-photo:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.btn-remove-photo:hover { border-color: var(--color-danger); color: var(--color-danger); }
+.photo-actions { display: flex; gap: 0.5rem; margin-top: 1rem; }
+
+/* Enterprise Footer Actions Overrides */
+.enterprise-footer-actions {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 1rem !important;
+  width: 100% !important;
+}
+
+.enterprise-footer-actions button {
+  flex: 0 1 auto !important;
+  width: auto !important;
+  min-width: 120px !important;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
 }

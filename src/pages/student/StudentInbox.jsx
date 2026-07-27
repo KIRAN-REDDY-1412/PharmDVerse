@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import StudentLayout from '../../components/student/StudentLayout';
 import ViewRecordModal from '../../components/college/shared/ViewRecordModal';
+import ConfirmDeleteModal from '../../components/college/shared/ConfirmDeleteModal';
 import { useDatabase } from '../../context/DatabaseContext';
 import { useAuth } from '../../context/AuthContext';
 

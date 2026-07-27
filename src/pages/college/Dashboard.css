@@ -81,13 +81,13 @@
 /* Cards Grids */
 .primary-cards-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
 
 .secondary-cards-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
 
@@ -131,6 +131,7 @@
 }
 
 .icon-blue { background-color: #3b82f6; }
+.icon-indigo { background-color: #6366f1; }
 .icon-green { background-color: #10b981; }
 .icon-purple { background-color: #8b5cf6; }
 .icon-orange { background-color: #f59e0b; }

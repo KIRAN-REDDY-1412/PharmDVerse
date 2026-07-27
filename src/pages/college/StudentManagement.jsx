@@ -33,7 +33,7 @@ const StudentManagement = () => {
             </div>
           </div>
 
-          <Link to="/college-admin/student-list" className="action-card">
+          <Link to="/college-admin/students/list" className="action-card">
             <div className="action-icon-wrapper green">
               <ListTodo size={32} />
             </div>

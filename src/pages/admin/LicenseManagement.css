@@ -1,0 +1,97 @@
+/* LicenseManagement.css */
+
+.license-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: var(--text-color);
+  padding-bottom: 40px;
+}
+
+.license-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.license-title-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.license-key-display {
+  font-family: monospace;
+  background-color: var(--bg-color);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px dashed var(--border-color);
+  color: var(--text-color);
+  letter-spacing: 1px;
+  font-size: 0.85rem;
+}
+
+.license-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.certificate-preview {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 32px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.certificate-preview::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-image: radial-gradient(circle at center, rgba(255,255,255,0.05) 0%, transparent 70%);
+}
+
+.cert-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.cert-college {
+  font-size: 1.25rem;
+  color: var(--primary-color);
+  margin-bottom: 24px;
+}
+
+.cert-details {
+  display: flex;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.cert-block {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.cert-label {
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.cert-value {
+  font-size: 0.85rem;
+  color: white;
+  font-family: monospace;
+}

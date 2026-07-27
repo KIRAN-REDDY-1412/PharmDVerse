@@ -10,13 +10,47 @@ const StudentDashboard = () => {
   const { getStudentCases } = useDatabase();
   const { currentUser } = useAuth();
 
-  const cases = currentUser ? getStudentCases(currentUser.id) : [];
+  const rawCases = currentUser ? getStudentCases(currentUser.id) : [];
+  
+  // Normalize status for counting
+  const cases = rawCases.map(c => ({
+    ...c,
+    status: c.status === 'Pending' ? 'Under Review' : c.status
+  }));
   
   const totalCases = cases.length;
   const draftCases = cases.filter(c => c.status === 'Draft').length;
   const submittedCases = cases.filter(c => c.status === 'Submitted').length;
-  const approvedCases = cases.filter(c => c.status === 'Approved').length;
+  const underReviewCases = cases.filter(c => c.status === 'Under Review').length;
   const returnedCases = cases.filter(c => c.status === 'Returned').length;
+  const approvedCases = cases.filter(c => c.status === 'Approved').length;
+  
+  // Form Statistics
+  let patientProfileCount = 0;
+  let patientCounsellingCount = 0;
+  let drugInfoCount = 0;
+  let pharmacistInterventionCount = 0;
+  let adrCount = 0;
+
+  cases.forEach(c => {
+    if (c.forms) {
+      if (c.forms.patientProfile?.status && c.forms.patientProfile.status !== 'Draft') patientProfileCount++;
+      if (c.forms.patientCounselling?.status && c.forms.patientCounselling.status !== 'Draft') patientCounsellingCount++;
+      if (c.forms.drugInformation?.status && c.forms.drugInformation.status !== 'Draft') drugInfoCount++;
+      if (c.forms.pharmacistIntervention?.status && c.forms.pharmacistIntervention.status !== 'Draft') pharmacistInterventionCount++;
+      if (c.forms.adrReporting?.status && c.forms.adrReporting.status !== 'Draft') adrCount++;
+    } else {
+      // Fallback logic for mock data without explicit forms object
+      if (c.status !== 'Draft') {
+        patientProfileCount++; // Patient profile is mandatory
+        if (c.id.includes('1') || c.id.includes('3')) patientCounsellingCount++;
+        if (c.id.includes('2')) drugInfoCount++;
+        if (c.id.includes('4')) pharmacistInterventionCount++;
+        if (c.id.includes('5')) adrCount++;
+      }
+    }
+  });
+
   return (
     <StudentLayout>
       <div className="dashboard-container animate-fade-in" style={{ padding: '1.5rem' }}>
@@ -71,12 +105,12 @@ const StudentDashboard = () => {
           </div>
         </div>
         
-        <div className="secondary-cards-grid" style={{ gridTemplateColumns: 'repeat(5, 1fr)' }}>
+        <div className="secondary-cards-grid" style={{ gridTemplateColumns: 'repeat(6, 1fr)' }}>
           <div className="dashboard-card">
             <div className="secondary-card-content">
               <div className="card-icon-wrapper secondary icon-purple"><ClipboardList size={24} /></div>
               <div className="card-stats">
-                <span className="card-title">Total Clinical Cases</span>
+                <span className="card-title">Total Cases</span>
                 <span className="card-value">{totalCases}</span>
               </div>
             </div>
@@ -92,7 +126,7 @@ const StudentDashboard = () => {
           </div>
           <div className="dashboard-card">
             <div className="secondary-card-content">
-              <div className="card-icon-wrapper secondary icon-orange"><Send size={24} /></div>
+              <div className="card-icon-wrapper secondary icon-indigo"><Send size={24} /></div>
               <div className="card-stats">
                 <span className="card-title">Submitted Cases</span>
                 <span className="card-value">{submittedCases}</span>
@@ -101,10 +135,10 @@ const StudentDashboard = () => {
           </div>
           <div className="dashboard-card">
             <div className="secondary-card-content">
-              <div className="card-icon-wrapper secondary icon-green"><BadgeCheck size={24} /></div>
+              <div className="card-icon-wrapper secondary icon-orange"><Activity size={24} /></div>
               <div className="card-stats">
-                <span className="card-title">Approved Cases</span>
-                <span className="card-value">{approvedCases}</span>
+                <span className="card-title">Under Review Cases</span>
+                <span className="card-value">{underReviewCases}</span>
               </div>
             </div>
           </div>
@@ -114,6 +148,15 @@ const StudentDashboard = () => {
               <div className="card-stats">
                 <span className="card-title">Returned Cases</span>
                 <span className="card-value">{returnedCases}</span>
+              </div>
+            </div>
+          </div>
+          <div className="dashboard-card">
+            <div className="secondary-card-content">
+              <div className="card-icon-wrapper secondary icon-green"><BadgeCheck size={24} /></div>
+              <div className="card-stats">
+                <span className="card-title">Approved Cases</span>
+                <span className="card-value">{approvedCases}</span>
               </div>
             </div>
           </div>
@@ -130,7 +173,7 @@ const StudentDashboard = () => {
                 </div>
                 <div className="card-stats">
                   <span className="card-title" style={{ fontSize: '0.8rem' }}>Patient Profile Forms</span>
-                  <span className="card-value">45</span>
+                  <span className="card-value">{patientProfileCount}</span>
                 </div>
               </div>
             </div>
@@ -142,7 +185,7 @@ const StudentDashboard = () => {
                 </div>
                 <div className="card-stats">
                   <span className="card-title" style={{ fontSize: '0.8rem' }}>Patient Counselling</span>
-                  <span className="card-value">28</span>
+                  <span className="card-value">{patientCounsellingCount}</span>
                 </div>
               </div>
             </div>
@@ -154,7 +197,7 @@ const StudentDashboard = () => {
                 </div>
                 <div className="card-stats">
                   <span className="card-title" style={{ fontSize: '0.8rem' }}>Drug Info Requests</span>
-                  <span className="card-value">12</span>
+                  <span className="card-value">{drugInfoCount}</span>
                 </div>
               </div>
             </div>
@@ -166,7 +209,7 @@ const StudentDashboard = () => {
                 </div>
                 <div className="card-stats">
                   <span className="card-title" style={{ fontSize: '0.8rem' }}>Pharmacist Intervention</span>
-                  <span className="card-value">8</span>
+                  <span className="card-value">{pharmacistInterventionCount}</span>
                 </div>
               </div>
             </div>
@@ -178,7 +221,7 @@ const StudentDashboard = () => {
                 </div>
                 <div className="card-stats">
                   <span className="card-title" style={{ fontSize: '0.8rem' }}>Adverse Drug Reactions</span>
-                  <span className="card-value">2</span>
+                  <span className="card-value">{adrCount}</span>
                 </div>
               </div>
             </div>

@@ -33,7 +33,7 @@ const PreceptorManagement = () => {
             </div>
           </div>
 
-          <Link to="/college-admin/preceptor-list" className="action-card">
+          <Link to="/college-admin/preceptors/list" className="action-card">
             <div className="action-icon-wrapper green">
               <ListTodo size={32} />
             </div>

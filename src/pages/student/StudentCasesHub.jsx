@@ -32,35 +32,6 @@ const StudentCasesHub = () => {
             </div>
           </Link>
 
-          <Link to="/student/cases/drafts" className="action-card">
-            <div className="action-icon-wrapper orange">
-              <FileText size={32} />
-            </div>
-            <div className="action-details">
-              <span className="action-title">Draft Cases</span>
-              <span className="action-subtitle">View and edit saved draft cases</span>
-            </div>
-          </Link>
-
-          <Link to="/student/cases/submitted" className="action-card">
-            <div className="action-icon-wrapper green">
-              <Send size={32} />
-            </div>
-            <div className="action-details">
-              <span className="action-title">Submitted Cases</span>
-              <span className="action-subtitle">View your submitted clinical cases</span>
-            </div>
-          </Link>
-
-          <Link to="/student/cases/returned" className="action-card">
-            <div className="action-icon-wrapper red">
-              <RotateCcw size={32} />
-            </div>
-            <div className="action-details">
-              <span className="action-title">Returned Cases</span>
-              <span className="action-subtitle">View and resubmit returned cases</span>
-            </div>
-          </Link>
         </div>
       </div>
     </StudentLayout>

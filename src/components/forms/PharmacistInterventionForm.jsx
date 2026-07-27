@@ -1,13 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronRight, Save, Send, User, AlertCircle, FileText, FileSearch, HelpCircle, Activity, Lightbulb, CheckCircle2, MessageSquare, Plus, Trash2 } from 'lucide-react';
-import StudentLayout from '../../components/student/StudentLayout';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { ChevronRight, ChevronLeft, Save, Send, User, AlertCircle, FileText, FileSearch, HelpCircle, Activity, Lightbulb, CheckCircle2, MessageSquare, Plus, Trash2, AlertTriangle } from 'lucide-react';
+import StudentLayout from '../student/StudentLayout';
+import CollegeAdminLayout from '../college/CollegeAdminLayout';
+import AdminLayout from '../admin/AdminLayout';
 import { useDatabase } from '../../context/DatabaseContext';
+import '../../pages/college/PreceptorManagement.css';
 import './PatientProfileForm.css';
 
-const PharmacistInterventionForm = () => {
+const PharmacistInterventionForm = ({ role = 'student' }) => {
   const navigate = useNavigate();
-  const { submitCase, saveDraftCase } = useDatabase();
+  const { id } = useParams();
+  const { cases, submitCase, saveDraftCase, updateFormStatus } = useDatabase();
+
+  const isAdmin = role === 'admin';
+  const isPreceptor = role === 'preceptor';
+  const isSuperAdmin = role === 'superadmin';
+  const Layout = (isPreceptor || isAdmin || isSuperAdmin) ? React.Fragment : StudentLayout;
+  
+  const existingCase = id ? cases.find(c => c.id === id) : null;
+  const isLocked = isPreceptor || isAdmin || isSuperAdmin || (existingCase && ['Approved', 'Submitted', 'Under Review'].includes(existingCase.status));
+  
+  let dashboardPath = '/student/dashboard';
+  let backPath = '/student/new-case';
+  let backText = 'New Case';
+
+  if (isPreceptor) {
+    dashboardPath = '/preceptor/dashboard';
+    backPath = `/preceptor/cases/view/${id}`;
+    backText = 'Review Case';
+  } else if (isSuperAdmin) {
+    dashboardPath = '/super-admin/dashboard';
+    backPath = `/super-admin/cases/view/${id}`;
+    backText = 'View Case';
+  } else if (isAdmin) {
+    dashboardPath = '/college-admin/dashboard';
+    backPath = `/college-admin/cases/view/${id}`;
+    backText = 'View Case';
+  } else if (id) {
+    backPath = `/student/cases/view/${id}`;
+    backText = 'View Case';
+  }
+
+  const formStatus = existingCase?.forms?.pharmacistIntervention?.status || 'Pending';
+  const [preceptorComments, setPreceptorComments] = useState(existingCase?.forms?.pharmacistIntervention?.comments || '');
+  const isReturned = existingCase && existingCase.status === 'Returned';
   
   // Section Navigation
   const [activeSection, setActiveSection] = useState(1);
@@ -21,6 +58,16 @@ const PharmacistInterventionForm = () => {
 
   const handleNext = () => { if (activeSection < sections.length) setActiveSection(prev => prev + 1); };
   const handlePrev = () => { if (activeSection > 1) setActiveSection(prev => prev - 1); };
+
+  // Scroll content to top when section changes
+  const contentBodyRef = useRef(null);
+  useEffect(() => {
+    if (contentBodyRef.current) {
+      contentBodyRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeSection]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -185,18 +232,10 @@ const PharmacistInterventionForm = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (isPreceptor) return;
     setIsSubmitting(true);
-    submitCase({
-      docType: 'Pharmacist Intervention',
-      patientName: formData.patientName || 'Unknown',
-      age: formData.age || 'Unknown',
-      gender: formData.gender || 'Unknown',
-      diagnosis: formData.diagnosis || 'Not specified',
-      hospital: 'City General Hospital',
-      department: formData.ward,
-      ...formData
-    });
+    submitCase({ docType: 'Pharmacist Intervention', ...formData });
     setTimeout(() => {
       setIsSubmitting(false);
       navigate('/student/cases/submitted');
@@ -204,30 +243,23 @@ const PharmacistInterventionForm = () => {
   };
 
   const handleSaveDraft = () => {
-    saveDraftCase({
-      docType: 'Pharmacist Intervention',
-      patientName: formData.patientName || 'Unknown',
-      age: formData.age || 'Unknown',
-      gender: formData.gender || 'Unknown',
-      diagnosis: formData.diagnosis || 'Not specified',
-      hospital: 'City General Hospital',
-      department: formData.ward,
-      ...formData
-    });
+    if (isPreceptor) return;
+    saveDraftCase({ docType: 'Pharmacist Intervention', ...formData });
     alert("Draft saved successfully!");
   };
 
   return (
-    <StudentLayout>
+    <Layout>
+
       <div className="preceptor-page">
         {/* Header */}
         <div className="page-header" style={{ marginBottom: '1rem' }}>
           <div>
             <h1 className="page-title">Pharmacist Intervention Form</h1>
             <div className="breadcrumbs" style={{ marginTop: '0.5rem' }}>
-              <Link to="/student/dashboard" className="breadcrumb-link">Dashboard</Link>
+              <Link to={dashboardPath} className="breadcrumb-link">Dashboard</Link>
               <span className="breadcrumb-separator">&gt;</span>
-              <Link to="/student/new-case" className="breadcrumb-link">New Case</Link>
+              <Link to={backPath} className="breadcrumb-link">{backText}</Link>
               <span className="breadcrumb-separator">&gt;</span>
               <span>Pharmacist Intervention</span>
             </div>
@@ -260,18 +292,30 @@ const PharmacistInterventionForm = () => {
           <div className="workspace-content">
             <div className="workspace-content-header">
               <h1 className="workspace-content-title">{sections.find(s => s.id === activeSection)?.title}</h1>
-              {activeSection !== sections.length && (
-                <button 
-                  className="btn-submit" 
-                  style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
-                  onClick={() => setActiveSection(activeSection + 1)}
-                >
-                  Next Section <ChevronRight size={16} />
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                {activeSection > 1 && (
+                  <button 
+                    className="btn-secondary" 
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    onClick={handlePrev}
+                  >
+                    <ChevronLeft size={16} /> Previous
+                  </button>
+                )}
+                {activeSection !== sections.length && (
+                  <button 
+                    className="btn-submit" 
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                    onClick={handleNext}
+                  >
+                    Next Section <ChevronRight size={16} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="workspace-content-body">
+            <div ref={contentBodyRef} className="workspace-content-body">
+              <fieldset disabled={isLocked} style={{ border: 'none', padding: 0, margin: 0 }}>
               {/* SECTION 1: Patient Information (Auto-fetched mostly) */}
               {activeSection === 1 && (
               <div className="form-section">
@@ -279,28 +323,28 @@ const PharmacistInterventionForm = () => {
                   <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>Basic patient metrics are auto-fetched from the Master Patient Profile.</p>
                 </div>
 
-                <div className="form-grid">
+                <div className="form-row">
                   <div className="form-group">
                     <label className="form-label">Date of intervention</label>
                     <input type="date" className="form-input" name="dateOfIntervention" value={formData.dateOfIntervention} onChange={handleInputChange} />
                   </div>
                 </div>
 
-                <div className="form-grid">
-                  <div className="form-group">
+                <div className="form-row">
+                  <div className="form-group" style={{ flex: 2, minWidth: '200px' }}>
                     <label className="form-label">Patient Name</label>
                     <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.patientName} readOnly />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ flex: 1, minWidth: '100px' }}>
                     <label className="form-label">Age / Sex</label>
                     <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={`${formData.age} / ${formData.sex}`} readOnly />
                   </div>
-                  <div className="form-group">
+                  <div className="form-group" style={{ flex: 1.5, minWidth: '150px' }}>
                     <label className="form-label">IP / OP No</label>
                     <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.ipNumber} readOnly />
                   </div>
-                  <div className="form-group">
-                    <label className="form-label">Ward</label>
+                  <div className="form-group" style={{ flex: 1, minWidth: '150px' }}>
+                    <label className="form-label">Ward / Unit</label>
                     <input type="text" className="form-input" style={{ backgroundColor: 'var(--bg-main)', cursor: 'not-allowed' }} value={formData.ward} readOnly />
                   </div>
                 </div>
@@ -372,7 +416,7 @@ const PharmacistInterventionForm = () => {
             {activeSection === 2 && (
               <div className="form-section">
                 <label className="form-label" style={{ marginBottom: '1rem', display: 'block' }}>Prescription problem (check all that apply)</label>
-                <div className="form-grid-3" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                <div className="form-row" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                   
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
@@ -453,7 +497,7 @@ const PharmacistInterventionForm = () => {
                 
                 <div className="form-group">
                   <label className="form-label" style={{ marginBottom: '1rem', display: 'block' }}>Action Taken (check all that apply)</label>
-                  <div className="form-grid" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <div className="form-row" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                       <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
                         <input type="checkbox" name="actionPrescriber" checked={formData.actionPrescriber} onChange={handleInputChange} style={{ width: '18px', height: '18px', marginTop: '2px' }} />
@@ -492,7 +536,7 @@ const PharmacistInterventionForm = () => {
 
                 <div className="form-group" style={{ marginTop: '2rem' }}>
                   <label className="form-label" style={{ marginBottom: '1rem', display: 'block' }}>Recommendations for Change (check all that apply)</label>
-                  <div className="form-grid-3" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                  <div className="form-row" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
                       <input type="checkbox" name="recDrug" checked={formData.recDrug} onChange={handleInputChange} style={{ width: '18px', height: '18px' }} />
                       Drug
@@ -531,7 +575,7 @@ const PharmacistInterventionForm = () => {
             {activeSection === 4 && (
               <div className="form-section">
                 
-                <div className="form-grid" style={{ marginBottom: '1.5rem' }}>
+                <div className="form-row" style={{ marginBottom: '1.5rem' }}>
                   <div className="form-group">
                     <label className="form-label">Specific background information collected?</label>
                     <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
@@ -569,7 +613,7 @@ const PharmacistInterventionForm = () => {
                   </div>
                 </div>
 
-                <div className="form-grid" style={{ marginBottom: '1.5rem', backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px' }}>
+                <div className="form-row" style={{ marginBottom: '1.5rem', backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px' }}>
                   <div className="form-group">
                     <label className="form-label">Recommendation Accepted?</label>
                     <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
@@ -602,7 +646,7 @@ const PharmacistInterventionForm = () => {
                   )}
                 </div>
 
-                <div className="form-grid" style={{ marginBottom: '1.5rem' }}>
+                <div className="form-row" style={{ marginBottom: '1.5rem' }}>
                   <div className="form-group">
                     <label className="form-label">Significance of intervention</label>
                     <div style={{ display: 'flex', gap: '2rem', marginTop: '0.5rem' }}>
@@ -656,26 +700,33 @@ const PharmacistInterventionForm = () => {
                 
                 <div className="review-section" style={{ backgroundColor: 'var(--bg-main)', padding: '1.5rem', borderRadius: '8px' }}>
                   <h3 className="review-section-title" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>Documentation Summary</h3>
-                  <div className="review-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '1.5rem' }}>
-                    {Object.entries(formData).map(([key, value]) => {
-                      if (typeof value === 'object' && value !== null) return null; // Skip complex arrays in summary
-                      if (key.includes('prob') || key.includes('action') || key.includes('rec')) {
-                        if (value !== true) return null; // Only show checked items for long checklists
-                      }
-                      
-                      const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
-                      const displayValue = value === true ? 'Yes' : value === false ? 'No' : value || '-';
-                      
-                      return (
-                        <div key={key} className="review-item">
-                          <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>{label}</span>
-                          <span style={{ display: 'block', fontWeight: 500, color: value ? 'var(--text-main)' : 'var(--text-secondary)' }}>
-                            {displayValue}
-                          </span>
-                        </div>
-                      );
-                    })}
+                  
+                  <div style={{ marginBottom: '2rem' }}>
+                    <h4 style={{ fontSize: '1rem', color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Intervention Details</h4>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid var(--border-color)' }}>
+                      <thead>
+                        <tr style={{ backgroundColor: 'var(--bg-surface)' }}>
+                          <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border-color)', width: '30%', color: 'var(--text-secondary)' }}>Field</th>
+                          <th style={{ padding: '0.75rem', textAlign: 'left', borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>Entered Value</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Date of Intervention</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.dateOfIntervention}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Description of Problem</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.descriptionOfProblem || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Background Collected</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.backgroundCollected || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Discussed with Physician</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.discussedWithPhysician || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Suggestions Made Time</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.suggestionsMadeTime || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Suggestion Accepted</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.suggestionAccepted || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Suggestion Changed</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.suggestionChanged || '-'}</td></tr>
+                        {(formData.suggestionAccepted === 'NO' || formData.suggestionChanged === 'NO') && (
+                           <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Reason if Not Changed</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.reasonIfNotChanged || '-'}</td></tr>
+                        )}
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Significance</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.significance || '-'}</td></tr>
+                        <tr><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>Outcome</td><td style={{ padding: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>{formData.outcome || '-'}</td></tr>
+                      </tbody>
+                    </table>
                   </div>
+
                 </div>
                 
                 <div className="workspace-actions">
@@ -686,12 +737,22 @@ const PharmacistInterventionForm = () => {
                 </div>
               </div>
             )}
-
+              </fieldset>
             </div> {/* End workspace-content-body */}
+
+          <div className="case-content-header" style={{ marginLeft: '1.5rem', marginTop: '1.5rem', marginRight: '1.5rem' }}>
+            {isPreceptor && (
+              <div style={{ backgroundColor: '#fff8e1', border: '1px solid #ffe082', padding: '0.5rem 1rem', borderRadius: '4px', fontSize: '0.85rem', color: '#8f6b00', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                <AlertCircle size={16} /> Read-Only Mode (Student Data)
+              </div>
+            )}
           </div>
-        </div>
+          
+          </div>
+
+        </div> {/* End workspace-content */}
       </div>
-    </StudentLayout>
+    </Layout>
   );
 };
 

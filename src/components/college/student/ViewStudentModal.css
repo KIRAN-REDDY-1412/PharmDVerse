@@ -1,0 +1,39 @@
+/* ViewStudentModal – Override styles (extends AddStudentModal.css) */
+
+.view-student-modal {
+  width: 80vw;
+  max-width: 1050px;
+}
+
+/* Read-only photo box – not clickable */
+.view-student-modal .student-photo-compact .student-photo-box {
+  cursor: default;
+  border-style: solid;
+  border-color: var(--border-color);
+}
+
+.view-student-modal .student-photo-compact .student-photo-box:hover {
+  border-color: var(--border-color);
+  box-shadow: none;
+}
+
+/* Status pill overrides for view */
+.view-student-modal .status-pill {
+  display: inline-block;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.view-student-modal .status-pill.status-active {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #059669;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.view-student-modal .status-pill.status-inactive {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}

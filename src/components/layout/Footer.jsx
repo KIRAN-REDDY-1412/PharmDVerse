@@ -35,26 +35,26 @@ const Footer = () => {
             <h4>Support</h4>
             <ul>
               <li><a href="#contact">Contact</a></li>
-              <li><a href="#">Help Center</a></li>
-              <li><a href="#">Documentation</a></li>
-              <li><a href="#">System Status</a></li>
+              <li><a href="/coming-soon">Help Center</a></li>
+              <li><a href="/coming-soon">Documentation</a></li>
+              <li><a href="/coming-soon">System Status</a></li>
             </ul>
           </div>
 
           <div className="footer-links-group">
             <h4>Legal</h4>
             <ul>
-              <li><a href="#">Privacy Policy</a></li>
-              <li><a href="#">Terms & Conditions</a></li>
-              <li><a href="#">HIPAA Compliance</a></li>
-              <li><a href="#">Security</a></li>
+              <li><a href="/coming-soon">Privacy Policy</a></li>
+              <li><a href="/coming-soon">Terms & Conditions</a></li>
+              <li><a href="/coming-soon">HIPAA Compliance</a></li>
+              <li><a href="/coming-soon">Security</a></li>
             </ul>
           </div>
         </div>
 
         <div className="footer-bottom">
           <p className="copyright">
-            &copy; {new Date().getFullYear()} PharmDVerse. All rights reserved.
+            &copy; {new Date().getFullYear()} PharmDVerse ERP Version 2.1.0 • All rights reserved.
           </p>
           <div className="footer-bottom-actions">
             <Link to="/super-admin" className="admin-link">

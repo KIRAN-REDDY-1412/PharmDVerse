@@ -5,20 +5,32 @@ import {
 } from 'lucide-react';
 import CollegeAdminLayout from '../../components/college/CollegeAdminLayout';
 import ViewRecordModal from '../../components/college/shared/ViewRecordModal';
+import { useDatabase } from '../../context/DatabaseContext';
 import './PreceptorList.css'; // Reusing for list tables
 
-const MOCK_STUDENTS = [
-  { rollNo: 'Y26PHD0301', name: 'Arun Kumar', course: 'Pharm.D', year: '3rd Year', mobile: '9876543301', status: 'Active' },
-  { rollNo: 'Y26PHD0302', name: 'Priya Sharma', course: 'Pharm.D', year: '4th Year', mobile: '9876543302', status: 'Active' },
-  { rollNo: 'Y25PHD0201', name: 'Rahul Verma', course: 'M.Pharm', year: '1st Year', mobile: '9876543303', status: 'Active' },
-  { rollNo: 'Y26PHD0303', name: 'Sneha Patel', course: 'Pharm.D', year: '5th Year', mobile: '9876543304', status: 'Inactive' },
-  { rollNo: 'Y26PHD0304', name: 'Vikram Singh', course: 'Pharm.D', year: '2nd Year', mobile: '9876543305', status: 'Active' },
-];
-
 const StudentReports = () => {
-  const [data] = useState(MOCK_STUDENTS);
+  const { users, academicYears } = useDatabase();
+  const allStudents = users.filter(u => u.role === 'student');
+
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+
+  // Filters
+  const [filterAcademicYear, setFilterAcademicYear] = useState('All');
+  const [filterBatch, setFilterBatch] = useState('All');
+  const [filterCourse, setFilterCourse] = useState('All');
+  const [filterYear, setFilterYear] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+
+  // Filter Data
+  const filteredData = allStudents.filter(student => {
+    const matchAy = filterAcademicYear === 'All' || student.academicYear === filterAcademicYear;
+    const matchBatch = filterBatch === 'All' || student.batch === filterBatch;
+    const matchCourse = filterCourse === 'All' || student.course === filterCourse;
+    const matchYear = filterYear === 'All' || student.year === filterYear;
+    const matchStatus = filterStatus === 'All' || student.status === filterStatus;
+    return matchAy && matchBatch && matchCourse && matchYear && matchStatus;
+  });
 
   const handleExport = (type) => {
     window.print();
@@ -30,15 +42,19 @@ const StudentReports = () => {
 
   const handleView = (row) => {
     setSelectedRecord([
-      { label: 'Roll No', value: row.rollNo },
-      { label: 'Name', value: row.name },
+      { label: 'Roll No', value: row.id },
+      { label: 'Name', value: row.name || row.fullName },
       { label: 'Course', value: row.course },
       { label: 'Year', value: row.year },
-      { label: 'Mobile', value: row.mobile },
+      { label: 'Academic Year', value: row.academicYear },
+      { label: 'Mobile', value: row.phone || row.mobileNumber },
       { label: 'Status', value: row.status, type: 'status' }
     ]);
     setIsViewModalOpen(true);
   };
+
+  const uniqueAcademicYears = Array.from(new Set(allStudents.map(s => s.academicYear).filter(Boolean))).sort();
+  const uniqueBatches = Array.from(new Set(allStudents.map(s => s.batch).filter(Boolean))).sort();
 
   return (
     <CollegeAdminLayout>
@@ -65,10 +81,11 @@ const StudentReports = () => {
             <div className="filter-group">
               <span className="filter-label">Academic Year</span>
               <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>2026-2027</option>
-                  <option>2025-2026</option>
+                <select value={filterAcademicYear} onChange={e => setFilterAcademicYear(e.target.value)}>
+                  <option value="All">All</option>
+                  {uniqueAcademicYears.map(ay => (
+                    <option key={ay} value={ay}>{ay}</option>
+                  ))}
                 </select>
                 <ChevronDown size={14} className="select-arrow" />
               </div>
@@ -77,10 +94,11 @@ const StudentReports = () => {
             <div className="filter-group">
               <span className="filter-label">Batch</span>
               <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>Y25</option>
-                  <option>Y26</option>
+                <select value={filterBatch} onChange={e => setFilterBatch(e.target.value)}>
+                  <option value="All">All</option>
+                  {uniqueBatches.map(b => (
+                    <option key={b} value={b}>{b}</option>
+                  ))}
                 </select>
                 <ChevronDown size={14} className="select-arrow" />
               </div>
@@ -89,10 +107,12 @@ const StudentReports = () => {
             <div className="filter-group">
               <span className="filter-label">Course</span>
               <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>Pharm.D</option>
-                  <option>M.Pharm</option>
+                <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)}>
+                  <option value="All">All</option>
+                  <option value="Pharm.D">Pharm.D</option>
+                  <option value="Pharm.D (PB)">Pharm.D (PB)</option>
+                  <option value="M.Pharm">M.Pharm</option>
+                  <option value="B.Pharm">B.Pharm</option>
                 </select>
                 <ChevronDown size={14} className="select-arrow" />
               </div>
@@ -101,10 +121,14 @@ const StudentReports = () => {
             <div className="filter-group">
               <span className="filter-label">Year</span>
               <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>1st Year</option>
-                  <option>2nd Year</option>
+                <select value={filterYear} onChange={e => setFilterYear(e.target.value)}>
+                  <option value="All">All</option>
+                  <option value="I Year">I Year</option>
+                  <option value="II Year">II Year</option>
+                  <option value="III Year">III Year</option>
+                  <option value="IV Year">IV Year</option>
+                  <option value="V Year">V Year</option>
+                  <option value="VI Year">VI Year</option>
                 </select>
                 <ChevronDown size={14} className="select-arrow" />
               </div>
@@ -113,17 +137,17 @@ const StudentReports = () => {
             <div className="filter-group">
               <span className="filter-label">Status</span>
               <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>Active</option>
-                  <option>Inactive</option>
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                  <option value="All">All</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
                 <ChevronDown size={14} className="select-arrow" />
               </div>
             </div>
 
-            <button className="btn-filter">
-              <Filter size={16} /> Generate Report
+            <button className="btn-filter" style={{ cursor: 'default', opacity: 0.8 }}>
+              <Filter size={16} /> Filters Applied
             </button>
           </div>
         </div>
@@ -149,35 +173,49 @@ const StudentReports = () => {
                 <th>Student Name</th>
                 <th>Course</th>
                 <th>Year</th>
+                <th>Academic Year</th>
                 <th>Mobile Number</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {data.map((row) => (
-                <tr key={row.rollNo}>
-                  <td><span className="id-link">{row.rollNo}</span></td>
-                  <td>{row.name}</td>
-                  <td>{row.course}</td>
-                  <td>{row.year}</td>
-                  <td>{row.mobile}</td>
-                  <td>
-                    <span className={`status-pill status-${row.status.toLowerCase()}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="action-btn" title="View" onClick={() => handleView(row)}>
-                        <Eye size={16} />
-                      </button>
-                    </div>
-                  </td>
+              {filteredData.length > 0 ? (
+                filteredData.map((row) => (
+                  <tr key={row.id}>
+                    <td><span className="id-link">{row.id}</span></td>
+                    <td>{row.name || row.fullName}</td>
+                    <td>{row.course}</td>
+                    <td>{row.year}</td>
+                    <td>{row.academicYear}</td>
+                    <td>{row.phone || row.mobileNumber || 'N/A'}</td>
+                    <td>
+                      <span className={`status-pill status-${(row.status || 'active').toLowerCase()}`}>
+                        {row.status || 'Active'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button className="action-btn" title="View" onClick={() => handleView(row)}>
+                          <Eye size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center', padding: '2rem' }}>No student records found matching the filters.</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
+          
+          <div className="pagination-container">
+            <div className="pagination-info">
+              Showing {filteredData.length} records
+            </div>
+          </div>
 
         </div>
       </div>

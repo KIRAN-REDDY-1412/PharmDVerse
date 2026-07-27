@@ -1,10 +1,17 @@
 import React from 'react';
-import { Search, Bell, Moon, Sun } from 'lucide-react';
+import { Search, Bell, Moon, Sun, User } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
+import { useAuth } from '../../context/AuthContext';
+import { useDatabase } from '../../context/DatabaseContext';
+import { Link } from 'react-router-dom';
 import '../college/CollegeHeader.css';
 
 const StudentHeader = () => {
   const { isDarkMode, toggleTheme } = useTheme();
+  const { currentUser } = useAuth();
+  const { notifications } = useDatabase();
+
+  const unreadCount = currentUser ? notifications.filter(n => n.recipientId === currentUser.id && n.status === 'Unread').length : 0;
 
   return (
     <header className="college-header">
@@ -27,10 +34,10 @@ const StudentHeader = () => {
         </div>
 
         <div className="header-actions">
-          <button className="header-action-btn" aria-label="Notifications" style={{ marginRight: '1rem' }}>
+          <Link to="/student/notifications" className="header-action-btn" aria-label="Notifications" style={{ marginRight: '1rem', textDecoration: 'none' }}>
             <Bell size={22} strokeWidth={1.5} />
-            <span className="notification-badge">5</span>
-          </button>
+            {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
+          </Link>
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color)', marginRight: '1rem' }}></div>
 
@@ -41,6 +48,14 @@ const StudentHeader = () => {
             </div>
             <Moon size={16} color="var(--text-secondary)" />
           </div>
+
+          {currentUser?.profilePhoto ? (
+            <img src={currentUser.profilePhoto} alt="Profile" className="header-profile-photo" />
+          ) : (
+            <div className="header-profile-photo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-surface-alt)' }}>
+              <User size={20} color="var(--text-secondary)" />
+            </div>
+          )}
         </div>
       </div>
       

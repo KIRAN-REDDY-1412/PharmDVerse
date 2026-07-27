@@ -1,0 +1,46 @@
+/* PaymentHistory.css */
+
+.payment-history-container {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+  color: var(--text-color);
+  padding-bottom: 40px;
+}
+
+.payment-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.payment-title-area {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.invoice-badge {
+  background-color: var(--bg-color);
+  border: 1px dashed var(--border-color);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.payment-method {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.amount-display {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--text-color);
+}

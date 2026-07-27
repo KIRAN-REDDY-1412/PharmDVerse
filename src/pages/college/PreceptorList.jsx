@@ -1,238 +1,545 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Download, 
-  Eye, 
-  Pencil, 
-  Trash2, 
-  ChevronsLeft,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsRight,
-  ChevronDown
+  Search, Plus, Filter, Download, ChevronDown, User, CheckCircle, 
+  Trash2, FileText, Activity, Users, FileSignature, AlertCircle,
+  Eye, Pencil, MoreVertical, KeyRound, SlidersHorizontal, Settings, Maximize, Minimize, ListFilter
 } from 'lucide-react';
 import CollegeAdminLayout from '../../components/college/CollegeAdminLayout';
 import AddPreceptorModal from '../../components/college/preceptor/AddPreceptorModal';
-import ViewRecordModal from '../../components/college/shared/ViewRecordModal';
-import ConfirmDeleteModal from '../../components/college/shared/ConfirmDeleteModal';
+import ViewPreceptorModal from '../../components/college/preceptor/ViewPreceptorModal';
+import ResetPasswordModal from '../../components/college/preceptor/ResetPreceptorPasswordModal';
 import { useDatabase } from '../../context/DatabaseContext';
 import './PreceptorList.css';
 
 const PreceptorList = () => {
-  const { users } = useDatabase();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const { users, cases, updateUser, resetUserPassword } = useDatabase();
+  const navigate = useNavigate();
+  
+  // Data State
   const preceptors = users.filter(u => u.role === 'preceptor');
-
+  
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterDept, setFilterDept] = useState('All');
+  const [filterDesignation, setFilterDesignation] = useState('All');
+  const [filterQualification, setFilterQualification] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+  
+  // Sorting
+  const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
+  
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  
+  // Modals & Row Interactivity
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isResetPwModalOpen, setIsResetPwModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [editRecord, setEditRecord] = useState(null);
+  
+  // Bulk Actions & More Menu
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [activeMenuId, setActiveMenuId] = useState(null);
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const handleDelete = (row) => {
-    setSelectedRecord(row);
-    setIsDeleteModalOpen(true);
+  // Enterprise Upgrades State
+  const [density, setDensity] = useState('comfortable'); // 'comfortable' | 'compact'
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showColumnChooser, setShowColumnChooser] = useState(false);
+  const [visibleColumns, setVisibleColumns] = useState({
+    preceptorId: true,
+    fullName: true,
+    email: false,
+    mobile: false,
+    department: true,
+    designation: true,
+    assignedStudents: true,
+    clinicalCases: true,
+    status: true
+  });
+
+  // Close menus on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // Keep column chooser open if clicking inside it
+      if (!e.target.closest('.column-chooser-dropdown') && !e.target.closest('.btn-column-toggle')) {
+        setShowColumnChooser(false);
+      }
+      if (!e.target.closest('.action-menu-dropdown') && !e.target.closest('.btn-icon')) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const showSuccess = (msg) => {
+    setSuccessMessage(msg);
+    setTimeout(() => setSuccessMessage(''), 3000);
   };
 
-  const confirmDelete = () => {
-    if (selectedRecord) {
-      alert(`Delete not fully implemented in UI for ${selectedRecord.id}`);
-      setIsDeleteModalOpen(false);
-      setSelectedRecord(null);
+  // -------------------------------------------------------------
+  // Data Processing
+  // -------------------------------------------------------------
+  let filteredData = preceptors.filter(p => {
+    const q = searchQuery.toLowerCase();
+    const matchSearch = 
+      p.id?.toLowerCase().includes(q) || 
+      p.name?.toLowerCase().includes(q) || 
+      p.fullName?.toLowerCase().includes(q) ||
+      p.email?.toLowerCase().includes(q) || 
+      p.phone?.toLowerCase().includes(q) ||
+      p.mobileNumber?.toLowerCase().includes(q) ||
+      p.department?.toLowerCase().includes(q) ||
+      p.dept?.toLowerCase().includes(q);
+
+    const matchDept = filterDept === 'All' || (p.department || p.dept) === filterDept;
+    const matchDesig = filterDesignation === 'All' || p.designation === filterDesignation;
+    const matchQual = filterQualification === 'All' || p.qualification === filterQualification;
+    const matchStatus = filterStatus === 'All' || p.status === filterStatus;
+
+    return matchSearch && matchDept && matchDesig && matchQual && matchStatus;
+  });
+
+  filteredData.sort((a, b) => {
+    const valA = String(a[sortConfig.key] || '');
+    const valB = String(b[sortConfig.key] || '');
+    if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+    if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  const totalRecords = filteredData.length;
+  const totalPages = Math.max(1, Math.ceil(totalRecords / rowsPerPage));
+  const safePage = Math.min(currentPage, totalPages);
+  const startIdx = (safePage - 1) * rowsPerPage;
+  const paginatedData = filteredData.slice(startIdx, startIdx + rowsPerPage);
+
+  // Quick Stats
+  const activeCount = preceptors.filter(p => p.status === 'Active').length;
+  const inactiveCount = preceptors.length - activeCount;
+
+  // -------------------------------------------------------------
+  // Handlers
+  // -------------------------------------------------------------
+  const handleSort = (key) => {
+    setSortConfig(prev => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }));
+  };
+
+  const toggleRowSelect = (id) => {
+    setSelectedRows(prev => prev.includes(id) ? prev.filter(rowId => rowId !== id) : [...prev, id]);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedRows.length === paginatedData.length) setSelectedRows([]);
+    else setSelectedRows(paginatedData.map(p => p.id));
+  };
+
+  const handleRowClick = (e, row) => {
+    // Ignore clicks if clicking on action buttons or checkboxes
+    if (e.target.closest('.action-buttons') || e.target.closest('.row-checkbox')) return;
+    navigate(`/college-admin/preceptors/${row.id}`);
+  };
+
+  const handleDeactivate = (row) => {
+    const assignedStudents = users.filter(u => u.role === 'student' && u.assignedPreceptorId === row.id);
+    if (assignedStudents.length > 0) {
+      alert(`Cannot deactivate preceptor. There are ${assignedStudents.length} student(s) currently assigned. Please reassign them first.`);
+    } else {
+      updateUser(row.id, { status: 'Inactive' });
+      showSuccess(`Preceptor "${row.name || row.fullName}" deactivated successfully.`);
     }
   };
 
-  const handleEdit = (row) => {
-    setEditRecord(row);
-    setIsAddModalOpen(true);
+  const handleBulkAction = (action) => {
+    if (action === 'export') {
+      window.print();
+      return;
+    }
+
+    let successCount = 0;
+    selectedRows.forEach(id => {
+      if (action === 'activate') {
+        updateUser(id, { status: 'Active' });
+        successCount++;
+      } else if (action === 'deactivate') {
+        const assignedStudents = users.filter(u => u.role === 'student' && u.assignedPreceptorId === id);
+        if (assignedStudents.length === 0) {
+          updateUser(id, { status: 'Inactive' });
+          successCount++;
+        }
+      }
+    });
+
+    if (successCount < selectedRows.length && action === 'deactivate') {
+      alert(`Some preceptors could not be deactivated because they have currently assigned students.`);
+    }
+    
+    if (successCount > 0) {
+      showSuccess(`${successCount} preceptor(s) successfully ${action}d.`);
+    }
+    setSelectedRows([]);
   };
 
-  const handleView = (row) => {
-    setSelectedRecord(row);
-    setIsViewModalOpen(true);
+  // -------------------------------------------------------------
+  // Render Helpers
+  // -------------------------------------------------------------
+  const getAssignedStudentsCount = (preceptorId) => {
+    return users.filter(u => u.role === 'student' && u.assignedPreceptorId === preceptorId).length;
+  };
+
+  const getClinicalCasesCount = (preceptorId, preceptorName) => {
+    return cases.filter(c => c.preceptor === preceptorName || c.preceptorId === preceptorId).length;
   };
 
   return (
     <CollegeAdminLayout>
       <div className="list-page-container">
         
-        {/* Header */}
+        {successMessage && (
+          <div style={{ position: 'fixed', top: '1.5rem', right: '1.5rem', zIndex: 9999, background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', padding: '0.85rem 1.5rem', borderRadius: '10px', fontSize: '0.9rem', fontWeight: 600, boxShadow: '0 8px 24px rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.5rem', animation: 'fadeInDown 0.3s ease' }}>
+            <CheckCircle size={18} /> {successMessage}
+          </div>
+        )}
+
         <div className="list-page-header">
           <div className="header-left">
-            <h1 className="page-title">Preceptor List</h1>
+            <h1 className="page-title">Preceptor Management</h1>
             <div className="breadcrumbs">
               <Link to="/college-admin/dashboard" className="breadcrumb-link">Dashboard</Link>
-              <span className="breadcrumb-separator">&gt;</span>
-              <Link to="/college-admin/preceptors" className="breadcrumb-link">Preceptor Management</Link>
               <span className="breadcrumb-separator">&gt;</span>
               <span>Preceptor List</span>
             </div>
           </div>
-        </div>
-
-        {/* Toolbar */}
-        <div className="list-toolbar">
-          <div className="toolbar-left">
-            <div className="search-box">
-              <Search size={18} className="search-icon" />
-              <input type="text" placeholder="Search by name, email, or mobile..." />
-            </div>
-            
-            <div className="filter-group">
-              <span className="filter-label">Department</span>
-              <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>Pharmacy Practice</option>
-                  <option>Pharmacology</option>
-                  <option>Pharmaceutics</option>
-                </select>
-                <ChevronDown size={14} className="select-arrow" />
-              </div>
-            </div>
-
-            <div className="filter-group">
-              <span className="filter-label">Status</span>
-              <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>Active</option>
-                  <option>Inactive</option>
-                </select>
-                <ChevronDown size={14} className="select-arrow" />
-              </div>
-            </div>
-
-            <button className="btn-filter">
-              <Filter size={16} /> Filter
+          <div className="header-right">
+            <button className="btn-primary" onClick={() => { setEditRecord(null); setIsAddModalOpen(true); }}>
+              <Plus size={18} /> Add Preceptor
             </button>
           </div>
+        </div>
 
-          <button className="btn-export">
+        {/* Quick Statistics */}
+        <div className="quick-stats-grid">
+          <div className="stat-card" onClick={() => setFilterStatus('All')}>
+            <div className="stat-icon total"><Users size={24} /></div>
+            <div className="stat-details">
+              <span className="stat-value">{preceptors.length}</span>
+              <span className="stat-label">Total Preceptors</span>
+            </div>
+          </div>
+          <div className="stat-card" onClick={() => setFilterStatus('Active')}>
+            <div className="stat-icon active"><CheckCircle size={24} /></div>
+            <div className="stat-details">
+              <span className="stat-value">{activeCount}</span>
+              <span className="stat-label">Active Preceptors</span>
+            </div>
+          </div>
+          <div className="stat-card" onClick={() => setFilterStatus('Inactive')}>
+            <div className="stat-icon inactive"><AlertCircle size={24} /></div>
+            <div className="stat-details">
+              <span className="stat-value">{inactiveCount}</span>
+              <span className="stat-label">Inactive Preceptors</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters & Search */}
+        <div className="list-toolbar">
+          <div className="toolbar-left" style={{ flexWrap: 'wrap' }}>
+            <div className="search-box">
+              <Search size={18} className="search-icon" />
+              <input type="text" placeholder="Search by ID, Name, Email, Mobile or Department..." value={searchQuery} onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }} />
+            </div>
+            {/* Enterprise Toolbar Extensions */}
+            <button className="btn-bulk btn-icon" onClick={() => setShowAdvancedFilters(!showAdvancedFilters)} title="Advanced Filters" style={{ background: showAdvancedFilters ? 'var(--bg-surface-alt)' : 'transparent', padding: '0.4rem 0.6rem' }}>
+              <ListFilter size={16} /> Filters
+            </button>
+            <div style={{ position: 'relative' }}>
+              <button className="btn-bulk btn-icon btn-column-toggle" onClick={() => setShowColumnChooser(!showColumnChooser)} title="Customize Columns" style={{ padding: '0.4rem 0.6rem' }}>
+                <Settings size={16} /> Columns
+              </button>
+              {showColumnChooser && (
+                <div className="column-chooser-dropdown">
+                  <div style={{ padding: '0.5rem', fontWeight: 600, fontSize: '0.85rem', borderBottom: '1px solid var(--border-color)', marginBottom: '0.5rem' }}>Visible Columns</div>
+                  {Object.keys(visibleColumns).map(col => (
+                    <label key={col} className="column-toggle-item">
+                      <input type="checkbox" checked={visibleColumns[col]} onChange={() => setVisibleColumns({...visibleColumns, [col]: !visibleColumns[col]})} />
+                      <span>{col.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button className="btn-bulk btn-icon" onClick={() => setDensity(d => d === 'comfortable' ? 'compact' : 'comfortable')} title="Toggle Density" style={{ padding: '0.4rem 0.6rem' }}>
+              {density === 'comfortable' ? <Minimize size={16} /> : <Maximize size={16} />}
+            </button>
+          </div>
+          
+          <button className="btn-export" onClick={() => window.print()}>
             <Download size={16} /> Export
           </button>
         </div>
 
+        {/* Advanced Filters Tray */}
+        {showAdvancedFilters && (
+          <div className="advanced-filters-tray">
+            <div className="filter-group">
+              <label>Department</label>
+              <div className="select-wrapper">
+                <select value={filterDept} onChange={(e) => { setFilterDept(e.target.value); setCurrentPage(1); }}>
+                  <option value="All">All Departments</option>
+                  <option value="Pharmacy Practice">Pharmacy Practice</option>
+                  <option value="Pharmacology">Pharmacology</option>
+                  <option value="Pharmaceutics">Pharmaceutics</option>
+                </select>
+                <ChevronDown size={14} className="select-arrow" />
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <label>Designation</label>
+              <div className="select-wrapper">
+                <select value={filterDesignation} onChange={(e) => { setFilterDesignation(e.target.value); setCurrentPage(1); }}>
+                  <option value="All">All Designations</option>
+                  <option value="Professor">Professor</option>
+                  <option value="Associate Professor">Associate Professor</option>
+                  <option value="Assistant Professor">Assistant Professor</option>
+                </select>
+                <ChevronDown size={14} className="select-arrow" />
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <label>Qualification</label>
+              <div className="select-wrapper">
+                <select value={filterQualification} onChange={(e) => { setFilterQualification(e.target.value); setCurrentPage(1); }}>
+                  <option value="All">All Qualifications</option>
+                  <option value="Pharm.D">Pharm.D</option>
+                  <option value="Pharm.D (PB)">Pharm.D (PB)</option>
+                  <option value="M.Pharm">M.Pharm</option>
+                </select>
+                <ChevronDown size={14} className="select-arrow" />
+              </div>
+            </div>
+
+            <div className="filter-group">
+              <label>Status</label>
+              <div className="select-wrapper">
+                <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setCurrentPage(1); }}>
+                  <option value="All">All Statuses</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+                <ChevronDown size={14} className="select-arrow" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Bulk Actions */}
+        {selectedRows.length > 0 && (
+          <div className="bulk-actions-toolbar">
+            <div className="bulk-actions-left">
+              <CheckCircle size={18} /> {selectedRows.length} Preceptor(s) Selected
+            </div>
+            <div className="bulk-actions-right">
+              <button className="btn-bulk" onClick={() => handleBulkAction('activate')}><CheckCircle size={14} /> Activate</button>
+              <button className="btn-bulk" onClick={() => handleBulkAction('deactivate')}><Trash2 size={14} /> Deactivate</button>
+              <button className="btn-bulk" onClick={() => handleBulkAction('export')}><Download size={14} /> Export</button>
+            </div>
+          </div>
+        )}
+
         {/* Data Table */}
         <div className="table-container">
-          <table className="data-table">
+          <table className={`data-table ${density === 'compact' ? 'table-density-compact' : ''}`}>
             <thead>
               <tr>
-                <th>Preceptor ID <span className="sort-icon">↕</span></th>
-                <th>Full Name</th>
-                <th>Department</th>
-                <th>Designation</th>
-                <th>Email</th>
-                <th>Mobile Number</th>
-                <th>Status</th>
+                <th style={{ width: '40px', paddingLeft: '1rem' }}>
+                  <input type="checkbox" className="row-checkbox" checked={selectedRows.length > 0 && selectedRows.length === paginatedData.length} onChange={toggleSelectAll} />
+                </th>
+                <th style={{ width: '50px' }}>Photo</th>
+                {visibleColumns.preceptorId && <th onClick={() => handleSort('id')} style={{ cursor: 'pointer' }}>Preceptor ID <span className="sort-icon">↕</span></th>}
+                {visibleColumns.fullName && <th onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>Full Name <span className="sort-icon">↕</span></th>}
+                {visibleColumns.email && <th onClick={() => handleSort('email')} style={{ cursor: 'pointer' }}>Email <span className="sort-icon">↕</span></th>}
+                {visibleColumns.mobile && <th onClick={() => handleSort('mobileNumber')} style={{ cursor: 'pointer' }}>Mobile <span className="sort-icon">↕</span></th>}
+                {visibleColumns.department && <th onClick={() => handleSort('department')} style={{ cursor: 'pointer' }}>Department <span className="sort-icon">↕</span></th>}
+                {visibleColumns.designation && <th onClick={() => handleSort('designation')} style={{ cursor: 'pointer' }}>Designation <span className="sort-icon">↕</span></th>}
+                {visibleColumns.assignedStudents && <th className="hide-on-mobile">Assigned Students</th>}
+                {visibleColumns.clinicalCases && <th className="hide-on-mobile">Clinical Cases</th>}
+                {visibleColumns.status && <th onClick={() => handleSort('status')} style={{ cursor: 'pointer' }}>Status <span className="sort-icon">↕</span></th>}
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {preceptors.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.id}</td>
-                  <td>{row.name || row.fullName}</td>
-                  <td>{row.department || row.dept}</td>
-                  <td>{row.designation}</td>
-                  <td>{row.email}</td>
-                  <td>{row.phone || row.mobile || row.mobileNumber}</td>
-                  <td>
-                    <span className={`status-pill ${row.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="action-btn" title="View" onClick={() => handleView(row)}>
-                        <Eye size={16} />
-                      </button>
-                      <button className="action-btn" title="Edit" onClick={() => handleEdit(row)}>
-                        <Pencil size={16} />
-                      </button>
-                      <button className="action-btn delete" title="Delete" onClick={() => handleDelete(row)}>
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+              {paginatedData.length === 0 ? (
+                <tr>
+                  <td colSpan="12" style={{ padding: '0' }}>
+                    {preceptors.length === 0 ? (
+                      <div className="enterprise-empty-state">
+                        <div className="icon-wrapper"><Users size={32} /></div>
+                        <h3>No Preceptors Registered</h3>
+                        <p>There are currently no preceptors in the system. Add a new preceptor to get started.</p>
+                        <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}><Plus size={16} /> Add Preceptor</button>
+                      </div>
+                    ) : (
+                      <div className="enterprise-empty-state">
+                        <div className="icon-wrapper"><Search size={32} /></div>
+                        <h3>No Matches Found</h3>
+                        <p>We couldn't find any preceptors matching your search criteria and active filters.</p>
+                        <button className="btn-bulk" onClick={() => { setSearchQuery(''); setFilterDept('All'); setFilterStatus('All'); setFilterDesignation('All'); setFilterQualification('All'); }}><Filter size={16} /> Clear All Filters</button>
+                      </div>
+                    )}
                   </td>
                 </tr>
-              ))}
+              ) : (
+                paginatedData.map((row) => (
+                  <tr key={row.id} className="clickable-row" onClick={(e) => handleRowClick(e, row)}>
+                    <td style={{ paddingLeft: '1rem' }} onClick={e => e.stopPropagation()}>
+                      <input type="checkbox" className="row-checkbox" checked={selectedRows.includes(row.id)} onChange={() => toggleRowSelect(row.id)} />
+                    </td>
+                    <td>
+                      {row.profilePhoto ? (
+                        <img src={row.profilePhoto} alt="Profile" className="profile-avatar" />
+                      ) : (
+                        <div className="profile-avatar"><User size={16} /></div>
+                      )}
+                    </td>
+                    {visibleColumns.preceptorId && <td style={{ fontWeight: 600 }}>{row.id}</td>}
+                    {visibleColumns.fullName && <td>{row.name || row.fullName}</td>}
+                    {visibleColumns.email && <td>{row.email}</td>}
+                    {visibleColumns.mobile && <td>{row.mobileNumber || row.phone}</td>}
+                    {visibleColumns.department && <td>{row.department || row.dept}</td>}
+                    {visibleColumns.designation && <td>{row.designation}</td>}
+                    {visibleColumns.assignedStudents && <td className="hide-on-mobile">
+                      <span style={{ display: 'inline-block', background: 'var(--bg-surface-alt)', padding: '0.25rem 0.75rem', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>
+                        {getAssignedStudentsCount(row.id)}
+                      </span>
+                    </td>}
+                    {visibleColumns.clinicalCases && <td className="hide-on-mobile">
+                      <span style={{ display: 'inline-block', background: 'var(--bg-surface-alt)', padding: '0.25rem 0.75rem', borderRadius: '12px', fontSize: '0.8rem', fontWeight: 600 }}>
+                        {getClinicalCasesCount(row.id, row.name || row.fullName)}
+                      </span>
+                    </td>}
+                    {visibleColumns.status && <td>
+                      <span className={`status-badge ${row.status === 'Active' ? 'status-active' : 'status-inactive'}`}>
+                        {row.status}
+                      </span>
+                    </td>}
+                    <td onClick={e => e.stopPropagation()}>
+                      <div className="action-buttons" onClick={e => e.stopPropagation()}>
+                        <button className="action-btn" title="View" onClick={() => navigate(`/college-admin/preceptors/${row.id}`)}>
+                          <Eye size={16} />
+                        </button>
+                        <button className="action-btn" title="Edit" onClick={() => { setEditRecord(row); setIsAddModalOpen(true); }}>
+                          <Pencil size={16} />
+                        </button>
+                        <div className="action-menu-container">
+                          <button className="action-btn" title="More" onClick={(e) => { e.stopPropagation(); setActiveMenuId(activeMenuId === row.id ? null : row.id); }}>
+                            <MoreVertical size={16} />
+                          </button>
+                          {activeMenuId === row.id && (
+                            <div className="action-menu-dropdown">
+                              <button className="action-menu-item" onClick={() => { setIsResetPwModalOpen(true); setSelectedRecord(row); setActiveMenuId(null); }}>
+                                <KeyRound size={14} /> Reset Password
+                              </button>
+                              <button className="action-menu-item" style={{ color: 'var(--color-danger)' }} onClick={() => { handleDeactivate(row); setActiveMenuId(null); }}>
+                                <Trash2 size={14} /> Deactivate
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
-
-          {/* Pagination */}
-          <div className="pagination-container">
-            <div className="pagination-info">
-              Showing 1 to 8 of 25 entries
-            </div>
-            
-            <div className="pagination-controls">
-              <div className="page-numbers">
-                <button className="page-btn"><ChevronsLeft size={16} /></button>
-                <button className="page-btn"><ChevronLeft size={16} /></button>
-                <button className="page-btn active">1</button>
-                <button className="page-btn">2</button>
-                <button className="page-btn">3</button>
-                <button className="page-btn"><ChevronRight size={16} /></button>
-                <button className="page-btn"><ChevronsRight size={16} /></button>
+          
+          {paginatedData.length > 0 && (
+            <div className="pagination-container">
+              <div className="pagination-info">
+                Showing {startIdx + 1}–{Math.min(startIdx + rowsPerPage, totalRecords)} of {totalRecords} Records
+                <select 
+                  style={{ marginLeft: '1rem', padding: '0.25rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-surface)' }}
+                  value={rowsPerPage} 
+                  onChange={(e) => { setRowsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                >
+                  <option value="10">10 / page</option>
+                  <option value="25">25 / page</option>
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
               </div>
-              
-              <div className="rows-per-page">
-                <div className="select-wrapper">
-                  <select>
-                    <option>10 / page</option>
-                    <option>20 / page</option>
-                    <option>50 / page</option>
-                  </select>
-                  <ChevronDown size={14} className="select-arrow" />
+              <div className="pagination-controls">
+                <button 
+                  className="page-btn" 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                >
+                  Previous
+                </button>
+                <div className="page-numbers">
+                  {/* Simplistic page numbers for brevity */}
+                  {[...Array(totalPages)].map((_, idx) => {
+                    const p = idx + 1;
+                    if (p === 1 || p === totalPages || (p >= currentPage - 1 && p <= currentPage + 1)) {
+                      return (
+                        <button key={p} className={`page-btn ${p === safePage ? 'active' : ''}`} onClick={() => setCurrentPage(p)}>
+                          {p}
+                        </button>
+                      );
+                    } else if (p === currentPage - 2 || p === currentPage + 2) {
+                      return <span key={p} style={{ margin: '0 0.25rem', color: 'var(--text-secondary)' }}>...</span>;
+                    }
+                    return null;
+                  })}
                 </div>
+                <button 
+                  className="page-btn" 
+                  disabled={currentPage === totalPages || totalPages === 0}
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                >
+                  Next
+                </button>
               </div>
             </div>
-          </div>
+          )}
         </div>
-
       </div>
 
-      <AddPreceptorModal 
-        isOpen={isAddModalOpen} 
-        onClose={() => {
-          setIsAddModalOpen(false);
-          setEditRecord(null);
-        }}
-        mode={editRecord ? 'edit' : 'add'}
-        initialData={editRecord}
-      />
+      {isAddModalOpen && (
+        <AddPreceptorModal
+          isOpen={isAddModalOpen}
+          onClose={() => { setIsAddModalOpen(false); setEditRecord(null); }}
+          mode={editRecord ? 'edit' : 'add'}
+          initialData={editRecord}
+        />
+      )}
 
-      <ViewRecordModal
-        isOpen={isViewModalOpen}
-        onClose={() => {
-          setIsViewModalOpen(false);
-          setSelectedRecord(null);
-        }}
-        title="Preceptor Details"
-        subtitle="View preceptor information"
-        fields={[
-          { label: 'Preceptor ID', value: selectedRecord?.id },
-          { label: 'Full Name', value: selectedRecord?.name },
-          { label: 'Department', value: selectedRecord?.dept },
-          { label: 'Designation', value: selectedRecord?.designation },
-          { label: 'Email', value: selectedRecord?.email },
-          { label: 'Mobile Number', value: selectedRecord?.mobile },
-          { label: 'Status', value: selectedRecord?.status, type: 'status' },
-        ]}
-      />
+      {isViewModalOpen && (
+        <ViewPreceptorModal
+          isOpen={isViewModalOpen}
+          onClose={() => setIsViewModalOpen(false)}
+          preceptor={selectedRecord}
+        />
+      )}
 
-      <ConfirmDeleteModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => {
-          setIsDeleteModalOpen(false);
-          setSelectedRecord(null);
-        }}
-        onConfirm={confirmDelete}
-        message="Are you sure you want to delete this record?"
-      />
+      {isResetPwModalOpen && (
+        <ResetPasswordModal
+          isOpen={isResetPwModalOpen}
+          onClose={() => setIsResetPwModalOpen(false)}
+          preceptorId={selectedRecord?.id}
+          onSubmit={(id, pw) => resetUserPassword(id, pw)}
+        />
+      )}
     </CollegeAdminLayout>
   );
 };

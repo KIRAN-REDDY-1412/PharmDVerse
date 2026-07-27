@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Navbar from '../components/layout/Navbar';
 import Hero from '../components/sections/Hero';
+import ActiveCollegesSection from '../components/sections/ActiveCollegesSection';
 import Features from '../components/sections/Features';
 import HowItWorks from '../components/sections/HowItWorks';
 import Statistics from '../components/sections/Statistics';
@@ -13,18 +14,26 @@ import { useNavigate } from 'react-router-dom';
 const LandingPage = () => {
   const navigate = useNavigate();
 
+  const scrollToActiveColleges = () => {
+    const el = document.getElementById('active-colleges');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="app-wrapper">
       <Navbar 
-        onLoginClick={() => navigate('/college-portal')} 
+        onLoginClick={scrollToActiveColleges} 
         onRegisterClick={() => navigate('/register-college')}
       />
       
       <main>
         <Hero 
-          onLoginClick={() => navigate('/college-portal')} 
+          onLoginClick={scrollToActiveColleges} 
           onRegisterClick={() => navigate('/register-college')}
         />
+        <ActiveCollegesSection />
         <Features />
         <HowItWorks />
         <Statistics />

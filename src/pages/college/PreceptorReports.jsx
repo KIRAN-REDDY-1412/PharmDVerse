@@ -5,19 +5,29 @@ import {
 } from 'lucide-react';
 import CollegeAdminLayout from '../../components/college/CollegeAdminLayout';
 import ViewRecordModal from '../../components/college/shared/ViewRecordModal';
+import { useDatabase } from '../../context/DatabaseContext';
 import './PreceptorList.css'; // Reusing for list tables
 
-const MOCK_PRECEPTORS = [
-  { id: 'PRE001', name: 'Dr. Ramesh Patel', dept: 'Pharmacy Practice', designation: 'Associate Professor', mobile: '9876543210', status: 'Active' },
-  { id: 'PRE002', name: 'Dr. Sunita Sharma', dept: 'Pharmacology', designation: 'Professor', mobile: '9876543211', status: 'Active' },
-  { id: 'PRE003', name: 'Dr. Arjun Verma', dept: 'Pharmaceutics', designation: 'Assistant Professor', mobile: '9876543212', status: 'Active' },
-  { id: 'PRE004', name: 'Dr. Neha Singh', dept: 'Pharmacognosy', designation: 'Associate Professor', mobile: '9876543213', status: 'Inactive' },
-];
-
 const PreceptorReports = () => {
-  const [data] = useState(MOCK_PRECEPTORS);
+  const { users } = useDatabase();
+  const allPreceptors = users.filter(u => u.role === 'preceptor');
+
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
+
+  // Filters
+  const [filterDept, setFilterDept] = useState('All');
+  const [filterDesignation, setFilterDesignation] = useState('All');
+  const [filterStatus, setFilterStatus] = useState('All');
+
+  // Filter Data
+  const filteredData = allPreceptors.filter(preceptor => {
+    const pDept = preceptor.department || preceptor.dept;
+    const matchDept = filterDept === 'All' || pDept === filterDept;
+    const matchDesig = filterDesignation === 'All' || preceptor.designation === filterDesignation;
+    const matchStatus = filterStatus === 'All' || preceptor.status === filterStatus;
+    return matchDept && matchDesig && matchStatus;
+  });
 
   const handleExport = (type) => {
     window.print();
@@ -29,15 +39,18 @@ const PreceptorReports = () => {
 
   const handleView = (row) => {
     setSelectedRecord([
-      { label: 'ID', value: row.id },
-      { label: 'Name', value: row.name },
-      { label: 'Department', value: row.dept },
+      { label: 'Employee ID', value: row.id },
+      { label: 'Name', value: row.name || row.fullName },
+      { label: 'Department', value: row.department || row.dept },
       { label: 'Designation', value: row.designation },
-      { label: 'Mobile', value: row.mobile },
+      { label: 'Mobile', value: row.phone || row.mobileNumber },
       { label: 'Status', value: row.status, type: 'status' }
     ]);
     setIsViewModalOpen(true);
   };
+
+  const uniqueDepartments = Array.from(new Set(allPreceptors.map(p => p.department || p.dept).filter(Boolean))).sort();
+  const uniqueDesignations = Array.from(new Set(allPreceptors.map(p => p.designation).filter(Boolean))).sort();
 
   return (
     <CollegeAdminLayout>
@@ -64,10 +77,11 @@ const PreceptorReports = () => {
             <div className="filter-group">
               <span className="filter-label">Department</span>
               <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>Pharmacy Practice</option>
-                  <option>Pharmacology</option>
+                <select value={filterDept} onChange={e => setFilterDept(e.target.value)}>
+                  <option value="All">All</option>
+                  {uniqueDepartments.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
                 </select>
                 <ChevronDown size={14} className="select-arrow" />
               </div>
@@ -76,11 +90,11 @@ const PreceptorReports = () => {
             <div className="filter-group">
               <span className="filter-label">Designation</span>
               <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>Professor</option>
-                  <option>Associate Professor</option>
-                  <option>Assistant Professor</option>
+                <select value={filterDesignation} onChange={e => setFilterDesignation(e.target.value)}>
+                  <option value="All">All</option>
+                  {uniqueDesignations.map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
                 </select>
                 <ChevronDown size={14} className="select-arrow" />
               </div>
@@ -89,17 +103,17 @@ const PreceptorReports = () => {
             <div className="filter-group">
               <span className="filter-label">Status</span>
               <div className="select-wrapper">
-                <select>
-                  <option>All</option>
-                  <option>Active</option>
-                  <option>Inactive</option>
+                <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                  <option value="All">All</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
                 <ChevronDown size={14} className="select-arrow" />
               </div>
             </div>
 
-            <button className="btn-filter">
-              <Filter size={16} /> Generate Report
+            <button className="btn-filter" style={{ cursor: 'default', opacity: 0.8 }}>
+              <Filter size={16} /> Filters Applied
             </button>
           </div>
         </div>
@@ -131,29 +145,41 @@ const PreceptorReports = () => {
               </tr>
             </thead>
             <tbody>
-              {data.map((row) => (
-                <tr key={row.id}>
-                  <td><span className="id-link">{row.id}</span></td>
-                  <td>{row.name}</td>
-                  <td>{row.dept}</td>
-                  <td>{row.designation}</td>
-                  <td>{row.mobile}</td>
-                  <td>
-                    <span className={`status-pill status-${row.status.toLowerCase()}`}>
-                      {row.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="action-btn" title="View" onClick={() => handleView(row)}>
-                        <Eye size={16} />
-                      </button>
-                    </div>
-                  </td>
+              {filteredData.length > 0 ? (
+                filteredData.map((row) => (
+                  <tr key={row.id}>
+                    <td><span className="id-link">{row.id}</span></td>
+                    <td>{row.name || row.fullName}</td>
+                    <td>{row.department || row.dept}</td>
+                    <td>{row.designation}</td>
+                    <td>{row.phone || row.mobileNumber || 'N/A'}</td>
+                    <td>
+                      <span className={`status-pill status-${(row.status || 'active').toLowerCase()}`}>
+                        {row.status || 'Active'}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons">
+                        <button className="action-btn" title="View" onClick={() => handleView(row)}>
+                          <Eye size={16} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem' }}>No preceptor records found matching the filters.</td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
+          
+          <div className="pagination-container">
+            <div className="pagination-info">
+              Showing {filteredData.length} records
+            </div>
+          </div>
 
         </div>
       </div>

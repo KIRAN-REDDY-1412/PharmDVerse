@@ -8,75 +8,131 @@ const UserProfileView = ({ user }) => {
   // Get initials for avatar
   const initials = user.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U';
 
-  const renderRoleSpecificFields = () => {
-    switch (user.role) {
-      case 'admin':
-        return (
-          <>
-            <div className="detail-group">
-              <span className="detail-label">Administrator ID</span>
-              <span className="detail-value">{user.id}</span>
-            </div>
-            <div className="detail-group">
-              <span className="detail-label">Designation</span>
-              <span className="detail-value">{user.designation || 'Principal'}</span>
-            </div>
-          </>
-        );
-      case 'preceptor':
-        return (
-          <>
-            <div className="detail-group">
-              <span className="detail-label">Preceptor ID</span>
-              <span className="detail-value">{user.id}</span>
-            </div>
+  const renderStudentFields = () => (
+    <>
+      <h3 className="profile-section-title">Academic Information</h3>
+      <div className="detail-group">
+        <span className="detail-label">Roll Number</span>
+        <span className="detail-value">{user.id}</span>
+      </div>
+      <div className="detail-group">
+        <span className="detail-label">Course</span>
+        <span className="detail-value">{user.course || '-'}</span>
+      </div>
+      <div className="detail-group">
+        <span className="detail-label">Branch</span>
+        <span className="detail-value">{user.branch || '-'}</span>
+      </div>
+      <div className="detail-group">
+        <span className="detail-label">Current Year</span>
+        <span className="detail-value">{user.year || '-'}</span>
+      </div>
+      <div className="detail-group">
+        <span className="detail-label">Batch</span>
+        <span className="detail-value">{user.batch || '-'}</span>
+      </div>
+      <div className="detail-group">
+        <span className="detail-label">Academic Year</span>
+        <span className="detail-value">{user.academicYear || '-'}</span>
+      </div>
+
+      <h3 className="profile-section-title">Account Information</h3>
+      <div className="detail-group">
+        <span className="detail-label">Username</span>
+        <span className="detail-value">{user.id}</span>
+      </div>
+      <div className="detail-group">
+        <span className="detail-label">Registration Date</span>
+        <span className="detail-value">{user.registrationDate || 'Aug 15, 2023'}</span>
+      </div>
+      <div className="detail-group">
+        <span className="detail-label">Last Login Date</span>
+        <span className="detail-value">{user.lastLoginDate || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+      </div>
+      <div className="detail-group">
+        <span className="detail-label">Last Login Time</span>
+        <span className="detail-value">{user.lastLoginTime || new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>
+      </div>
+      <div className="detail-group">
+        <span className="detail-label">Account Status</span>
+        <span className="detail-value status-badge" style={{ backgroundColor: user.status === 'Inactive' ? '#fef2f2' : '#f0fdf4', color: user.status === 'Inactive' ? '#991b1b' : '#166534', border: `1px solid ${user.status === 'Inactive' ? '#fecaca' : '#bbf7d0'}`, width: 'fit-content', padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>{user.status || 'Active'}</span>
+      </div>
+    </>
+  );
+
+  const renderOtherRoleFields = () => (
+    <>
+      <div className="detail-group">
+        <span className="detail-label">User ID</span>
+        <span className="detail-value">{user.id}</span>
+      </div>
+
+      {user.email && (
+        <div className="detail-group">
+          <span className="detail-label">Email Address</span>
+          <span className="detail-value">{user.email}</span>
+        </div>
+      )}
+
+      {(user.phone || user.mobileNumber || user.mobile) && (
+        <div className="detail-group">
+          <span className="detail-label">Mobile Number</span>
+          <span className="detail-value">{user.phone || user.mobileNumber || user.mobile}</span>
+        </div>
+      )}
+
+      {user.gender && (
+        <div className="detail-group">
+          <span className="detail-label">Gender</span>
+          <span className="detail-value">{user.gender}</span>
+        </div>
+      )}
+
+      {user.department && (
+        <div className="detail-group">
+          <span className="detail-label">Department</span>
+          <span className="detail-value">{user.department}</span>
+        </div>
+      )}
+
+      {user.status && (
+        <div className="detail-group">
+          <span className="detail-label">Account Status</span>
+          <span className="detail-value status-badge">{user.status}</span>
+        </div>
+      )}
+
+      {user.role === 'admin' && user.designation && (
+        <div className="detail-group">
+          <span className="detail-label">Designation</span>
+          <span className="detail-value">{user.designation}</span>
+        </div>
+      )}
+
+      {user.role === 'preceptor' && (
+        <>
+          {user.qualification && (
             <div className="detail-group">
               <span className="detail-label">Qualification</span>
-              <span className="detail-value">{user.qualification || 'Pharm.D'}</span>
+              <span className="detail-value">{user.qualification}</span>
             </div>
+          )}
+          {user.designation && (
             <div className="detail-group">
               <span className="detail-label">Designation</span>
-              <span className="detail-value">{user.designation || 'Senior Preceptor'}</span>
+              <span className="detail-value">{user.designation}</span>
             </div>
+          )}
+          {user.specialization && (
             <div className="detail-group">
               <span className="detail-label">Specialization</span>
-              <span className="detail-value">{user.specialization || 'Clinical Pharmacy'}</span>
+              <span className="detail-value">{user.specialization}</span>
             </div>
-          </>
-        );
-      case 'student':
-        return (
-          <>
-            <div className="detail-group">
-              <span className="detail-label">Roll Number</span>
-              <span className="detail-value">{user.id}</span>
-            </div>
-            <div className="detail-group">
-              <span className="detail-label">Course</span>
-              <span className="detail-value">{user.course || 'Pharm.D'}</span>
-            </div>
-            <div className="detail-group">
-              <span className="detail-label">Academic Year</span>
-              <span className="detail-value">{user.academicYear || '5th Year'}</span>
-            </div>
-            <div className="detail-group">
-              <span className="detail-label">Semester</span>
-              <span className="detail-value">{user.semester || 'Semester 9'}</span>
-            </div>
-            <div className="detail-group">
-              <span className="detail-label">Batch</span>
-              <span className="detail-value">{user.batch || '2020-2026'}</span>
-            </div>
-            <div className="detail-group">
-              <span className="detail-label">Assigned Preceptor</span>
-              <span className="detail-value">{user.assignedPreceptor || 'Not Assigned'}</span>
-            </div>
-          </>
-        );
-      default:
-        return null;
-    }
-  };
+          )}
+        </>
+      )}
+    </>
+  );
 
   return (
     <div className="profile-card">
@@ -90,62 +146,31 @@ const UserProfileView = ({ user }) => {
             )}
           </div>
           <div className="profile-name-block">
-            <h2>{user.name}</h2>
-            <p>{user.role === 'admin' ? 'College Admin' : user.role === 'preceptor' ? 'Preceptor' : 'Student'} • {user.department || 'General'}</p>
+            <h2 style={{ marginBottom: user.role === 'student' ? '0.5rem' : '0' }}>{user.name || user.fullName}</h2>
+            {user.role === 'student' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
+                <div><strong>Roll Number:</strong> {user.id}</div>
+                <div><strong>Username:</strong> {user.id}</div>
+                <div>
+                  <strong>Course:</strong> {user.course || '-'} &nbsp;|&nbsp; 
+                  <strong>Branch:</strong> {user.branch || '-'} &nbsp;|&nbsp; 
+                  <strong>Current Year:</strong> {user.year || '-'}
+                </div>
+                <div style={{ marginTop: '0.25rem' }}>
+                   <span className="status-badge" style={{ backgroundColor: user.status === 'Inactive' ? '#fef2f2' : '#f0fdf4', color: user.status === 'Inactive' ? '#991b1b' : '#166534', border: `1px solid ${user.status === 'Inactive' ? '#fecaca' : '#bbf7d0'}`, padding: '0.25rem 0.5rem', borderRadius: '4px', fontSize: '0.8rem', fontWeight: 600 }}>
+                     {user.status || 'Active'}
+                   </span>
+                </div>
+              </div>
+            ) : (
+              <p>{user.role === 'admin' ? 'College Admin' : user.role === 'preceptor' ? 'Preceptor' : 'Student'}{user.department && user.role !== 'student' ? ` • ${user.department}` : ''}</p>
+            )}
           </div>
         </div>
       </div>
 
       <div className="profile-details-grid">
-        
-        <div className="detail-group">
-          <span className="detail-label">User ID / Roll No</span>
-          <span className="detail-value">{user.id}</span>
-        </div>
-
-        <div className="detail-group">
-          <span className="detail-label">Email Address</span>
-          <span className="detail-value">{user.email || 'Not provided'}</span>
-        </div>
-
-        <div className="detail-group">
-          <span className="detail-label">Mobile Number</span>
-          <span className="detail-value">{user.phone || 'Not provided'}</span>
-        </div>
-
-        <div className="detail-group">
-          <span className="detail-label">Gender</span>
-          <span className="detail-value">{user.gender || 'Not specified'}</span>
-        </div>
-
-        <div className="detail-group">
-          <span className="detail-label">Department</span>
-          <span className="detail-value">{user.department || 'General'}</span>
-        </div>
-
-        <div className="detail-group">
-          <span className="detail-label">Account Status</span>
-          <span className="detail-value status-badge">{user.status || 'Active'}</span>
-        </div>
-
-        <div className="detail-group">
-          <span className="detail-label">Date of Birth</span>
-          <span className="detail-value">{user.dateOfBirth || 'Not provided'}</span>
-        </div>
-
-        <div className="detail-group">
-          <span className="detail-label">Address</span>
-          <span className="detail-value">{user.address || 'Not provided'}</span>
-        </div>
-
-        <div className="detail-group">
-          <span className="detail-label">Institution Name</span>
-          <span className="detail-value">{user.institution || 'PharmDVerse Medical College'}</span>
-        </div>
-
-        {/* Role Specific Fields */}
-        {renderRoleSpecificFields()}
-
+        {user.role === 'student' ? renderStudentFields() : renderOtherRoleFields()}
       </div>
     </div>
   );

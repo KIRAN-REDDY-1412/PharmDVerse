@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
-import { X, Save, Send, ChevronDown, Paperclip, Calendar } from 'lucide-react';
+import { X, Save, Send, ChevronDown, Paperclip, Calendar, Clock, AlertTriangle, Info, BellRing } from 'lucide-react';
 import '../preceptor/AddPreceptorModal.css';
 import '../student/AddStudentModal.css';
 
 const SendNotificationModal = ({ isOpen, onClose }) => {
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
-    title: '',
-    category: '',
-    recipients: 'All Students',
+    audienceType: 'broadcast', // broadcast, group, individual
+    targetGroup: '',
+    targetIndividual: '',
     subject: '',
     message: '',
-    schedule: 'Send Now',
+    priority: 'info', // info, warning, urgent
+    scheduleType: 'now', // now, schedule
     scheduleDate: '',
     scheduleTime: '',
-    status: true
+    expiryDate: ''
   });
   
   const [errors, setErrors] = useState({});
-  const [fileName, setFileName] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -25,224 +26,213 @@ const SendNotificationModal = ({ isOpen, onClose }) => {
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const validTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/jpeg', 'image/jpg', 'image/png'];
-    if (!validTypes.includes(file.type)) {
-      alert('Please upload a PDF, DOCX, JPG, or PNG file.');
-      return;
-    }
-    
-    if (file.size > 10 * 1024 * 1024) {
-      alert('File size must be less than 10 MB.');
-      return;
-    }
-    
-    setFileName(file.name);
-  };
-
-  const validate = () => {
+  const validateStep = (currentStep) => {
     const newErrors = {};
-    if (!formData.title.trim()) newErrors.title = 'Required';
-    if (!formData.category) newErrors.category = 'Required';
-    if (!formData.subject.trim()) newErrors.subject = 'Required';
-    if (!formData.message.trim()) newErrors.message = 'Required';
-    
-    if (formData.schedule === 'Schedule for Later') {
-      if (!formData.scheduleDate) newErrors.scheduleDate = 'Required';
-      if (!formData.scheduleTime) newErrors.scheduleTime = 'Required';
+    if (currentStep === 1) {
+      if (formData.audienceType === 'group' && !formData.targetGroup) newErrors.targetGroup = 'Required';
+      if (formData.audienceType === 'individual' && !formData.targetIndividual) newErrors.targetIndividual = 'Required';
+    } else if (currentStep === 2) {
+      if (!formData.subject.trim()) newErrors.subject = 'Required';
+      if (!formData.message.trim()) newErrors.message = 'Required';
+    } else if (currentStep === 3) {
+      if (formData.scheduleType === 'schedule') {
+        if (!formData.scheduleDate) newErrors.scheduleDate = 'Required';
+        if (!formData.scheduleTime) newErrors.scheduleTime = 'Required';
+      }
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = () => {
-    if (validate()) {
-      alert('Notification processed successfully!');
+  const nextStep = () => { if (validateStep(step)) setStep(s => s + 1); };
+  const prevStep = () => setStep(s => s - 1);
+
+  const handleDispatch = () => {
+    if (validateStep(3)) {
+      alert('Notification broadcast sequence initiated successfully!');
       handleReset();
       onClose();
     }
   };
 
   const handleReset = () => {
+    setStep(1);
     setFormData({
-      title: '',
-      category: '',
-      recipients: 'All Students',
-      subject: '',
-      message: '',
-      schedule: 'Send Now',
-      scheduleDate: '',
-      scheduleTime: '',
-      status: true
+      audienceType: 'broadcast', targetGroup: '', targetIndividual: '',
+      subject: '', message: '', priority: 'info',
+      scheduleType: 'now', scheduleDate: '', scheduleTime: '', expiryDate: ''
     });
     setErrors({});
-    setFileName('');
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="student-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '900px' }}>
+      <div className="student-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '700px' }}>
         
         {/* Header */}
         <div className="modal-header">
           <div className="modal-title-group">
-            <Send size={32} className="modal-title-icon" />
+            <Send size={32} className="modal-title-icon" style={{ backgroundColor: 'var(--color-primary)', color: 'white', padding: '6px', borderRadius: '8px' }} />
             <div className="modal-title-text">
-              <h2>Send Notification</h2>
-              <p>Create and distribute announcements</p>
+              <h2>New Broadcast Announcement</h2>
+              <p>Dispatch alerts to Students and Preceptors</p>
             </div>
           </div>
-          <button className="close-button" onClick={onClose}>
-            <X size={24} />
-          </button>
+          <button className="close-button" onClick={onClose}><X size={24} /></button>
         </div>
 
-        {/* Body */}
-        <div className="modal-body">
-          <div className="form-main">
-            
-            <div className="section-grid">
+        {/* Wizard Progress */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-surface-alt)' }}>
+          {[1, 2, 3].map((num) => (
+            <div key={num} style={{ flex: 1, padding: '1rem', textAlign: 'center', borderBottom: step === num ? '3px solid var(--color-primary)' : '3px solid transparent', color: step >= num ? 'var(--color-primary)' : 'var(--text-muted)', fontWeight: step === num ? 600 : 400, transition: 'all 0.2s' }}>
+              Step {num}: {num === 1 ? 'Audience' : num === 2 ? 'Composition' : 'Lifecycle'}
+            </div>
+          ))}
+        </div>
+
+        <div className="modal-body" style={{ minHeight: '350px' }}>
+          
+          {/* STEP 1: AUDIENCE */}
+          {step === 1 && (
+            <div className="form-section">
+              <h3 className="section-title">Select Target Audience</h3>
               
-              {/* Left Column */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
                 <div className="form-group">
-                  <label>Notification Title <span className="required-asterisk">*</span></label>
-                  <input type="text" className={`form-control ${errors.title ? 'error' : ''}`} name="title" value={formData.title} onChange={handleChange} placeholder="e.g. Exam Schedule Release" />
-                  {errors.title && <span className="field-error">{errors.title}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label>Category <span className="required-asterisk">*</span></label>
-                  <div className="form-control-wrapper">
-                    <select className={`form-control ${errors.category ? 'error' : ''}`} name="category" value={formData.category} onChange={handleChange}>
-                      <option value="">Select Category</option>
-                      <option value="General Announcement">General Announcement</option>
-                      <option value="Academic">Academic</option>
-                      <option value="Clinical Cases">Clinical Cases</option>
-                      <option value="Meeting">Meeting</option>
-                      <option value="Holiday">Holiday</option>
-                      <option value="Emergency">Emergency</option>
-                    </select>
-                    <ChevronDown size={16} className="select-arrow" />
-                  </div>
-                  {errors.category && <span className="field-error">{errors.category}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label>Recipients <span className="required-asterisk">*</span></label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
-                    {['All Students', 'All Preceptors', 'Selected Students', 'Selected Preceptors'].map(opt => (
-                      <label key={opt} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem', color: 'var(--text-primary)' }}>
-                        <input 
-                          type="radio" 
-                          name="recipients" 
-                          value={opt} 
-                          checked={formData.recipients === opt} 
-                          onChange={handleChange} 
-                          style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary)' }}
-                        />
-                        {opt}
+                  <label className="required">Audience Scope</label>
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                    {['broadcast', 'group', 'individual'].map(type => (
+                      <label key={type} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.75rem 1rem', border: '1px solid var(--border-color)', borderRadius: '8px', background: formData.audienceType === type ? 'var(--bg-surface-alt)' : 'transparent', flex: 1 }}>
+                        <input type="radio" name="audienceType" value={type} checked={formData.audienceType === type} onChange={handleChange} />
+                        <span style={{ textTransform: 'capitalize', fontWeight: formData.audienceType === type ? 600 : 400 }}>{type}</span>
                       </label>
                     ))}
                   </div>
                 </div>
-              </div>
 
-              {/* Right Column */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div className="form-group">
-                  <label>Subject <span className="required-asterisk">*</span></label>
-                  <input type="text" className={`form-control ${errors.subject ? 'error' : ''}`} name="subject" value={formData.subject} onChange={handleChange} placeholder="Email/Notification Subject" />
-                  {errors.subject && <span className="field-error">{errors.subject}</span>}
-                </div>
-
-                <div className="form-group" style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <label>Message <span className="required-asterisk">*</span></label>
-                  <textarea 
-                    className={`form-control ${errors.message ? 'error' : ''}`} 
-                    name="message" 
-                    value={formData.message} 
-                    onChange={handleChange} 
-                    placeholder="Type your message here..."
-                    style={{ resize: 'vertical', flex: 1, minHeight: '150px' }}
-                  />
-                  {errors.message && <span className="field-error">{errors.message}</span>}
-                </div>
-              </div>
-
-              {/* Full Width Footer Elements */}
-              <div className="form-group full-width">
-                <label>Attachment (Optional)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <button type="button" className="btn-reset" onClick={() => document.getElementById('notif-attachment').click()} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Paperclip size={16} /> Choose File
-                  </button>
-                  <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                    {fileName || 'No file selected (PDF, DOCX, JPG, PNG - Max 10MB)'}
-                  </span>
-                  <input type="file" id="notif-attachment" style={{ display: 'none' }} accept=".pdf,.docx,.jpg,.jpeg,.png" onChange={handleFileUpload} />
-                </div>
-              </div>
-
-              <div className="form-group full-width" style={{ display: 'flex', alignItems: 'flex-start', gap: '3rem', padding: '1rem', backgroundColor: 'var(--bg-surface-alt)', borderRadius: '8px' }}>
-                
-                {/* Schedule */}
-                <div style={{ flex: 1 }}>
-                  <label style={{ marginBottom: '1rem', display: 'block' }}>Schedule</label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                      <input type="radio" name="schedule" value="Send Now" checked={formData.schedule === 'Send Now'} onChange={handleChange} style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary)' }} />
-                      Send Now
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.9rem' }}>
-                      <input type="radio" name="schedule" value="Schedule for Later" checked={formData.schedule === 'Schedule for Later'} onChange={handleChange} style={{ width: '16px', height: '16px', accentColor: 'var(--color-primary)' }} />
-                      Schedule for Later
-                    </label>
-                  </div>
-                  
-                  {formData.schedule === 'Schedule for Later' && (
-                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-                      <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                         <input type="date" className={`form-control ${errors.scheduleDate ? 'error' : ''}`} name="scheduleDate" value={formData.scheduleDate} onChange={handleChange} />
-                      </div>
-                      <div className="form-group" style={{ flex: 1, margin: 0 }}>
-                         <input type="time" className={`form-control ${errors.scheduleTime ? 'error' : ''}`} name="scheduleTime" value={formData.scheduleTime} onChange={handleChange} />
-                      </div>
+                {formData.audienceType === 'group' && (
+                  <div className="form-group" style={{ animation: 'fadeIn 0.2s' }}>
+                    <label className="required">Select Group</label>
+                    <div className="select-wrapper">
+                      <select name="targetGroup" value={formData.targetGroup} onChange={handleChange} className={errors.targetGroup ? 'error' : ''}>
+                        <option value="">Select a specific cohort...</option>
+                        <option value="All Students">All Students</option>
+                        <option value="All Preceptors">All Preceptors</option>
+                        <option value="Batch 2024">Batch 2024</option>
+                        <option value="Batch 2025">Batch 2025</option>
+                        <option value="Cardiology Preceptors">Cardiology Preceptors</option>
+                      </select>
+                      <ChevronDown size={18} className="select-arrow" />
                     </div>
-                  )}
-                </div>
+                    {errors.targetGroup && <span className="error-message">{errors.targetGroup}</span>}
+                  </div>
+                )}
 
-                {/* Status Toggle */}
-                <div>
-                  <label style={{ marginBottom: '1rem', display: 'block' }}>Status</label>
-                  <div className="toggle-container">
-                    <label className="toggle-switch">
-                      <input type="checkbox" checked={formData.status} onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.checked }))} />
-                      <span className="toggle-slider"></span>
-                    </label>
-                    <span className={`toggle-label ${formData.status ? 'active-label' : 'inactive-label'}`}>
-                      {formData.status ? 'Active' : 'Inactive'}
-                    </span>
+                {formData.audienceType === 'individual' && (
+                  <div className="form-group" style={{ animation: 'fadeIn 0.2s' }}>
+                    <label className="required">Recipient ID</label>
+                    <input type="text" name="targetIndividual" value={formData.targetIndividual} onChange={handleChange} placeholder="Enter Student or Preceptor ID..." className={errors.targetIndividual ? 'error' : ''} />
+                    {errors.targetIndividual && <span className="error-message">{errors.targetIndividual}</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* STEP 2: COMPOSITION */}
+          {step === 2 && (
+            <div className="form-section">
+              <h3 className="section-title">Message Composition</h3>
+              
+              <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+                <div className="form-group">
+                  <label className="required">Priority Level</label>
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '0.5rem' }}>
+                    {[
+                      { val: 'info', icon: <Info size={16} />, color: 'var(--color-primary)' },
+                      { val: 'warning', icon: <AlertTriangle size={16} />, color: 'var(--color-warning)' },
+                      { val: 'urgent', icon: <BellRing size={16} />, color: 'var(--color-danger)' }
+                    ].map(type => (
+                      <label key={type.val} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.5rem 1rem', border: `1px solid ${formData.priority === type.val ? type.color : 'var(--border-color)'}`, borderRadius: '8px', background: formData.priority === type.val ? `${type.color}15` : 'transparent', color: formData.priority === type.val ? type.color : 'inherit' }}>
+                        <input type="radio" name="priority" value={type.val} checked={formData.priority === type.val} onChange={handleChange} style={{ display: 'none' }} />
+                        {type.icon} <span style={{ textTransform: 'capitalize', fontWeight: 600 }}>{type.val}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
 
-              </div>
+                <div className="form-group">
+                  <label className="required">Subject</label>
+                  <input type="text" name="subject" value={formData.subject} onChange={handleChange} placeholder="Brief title for this announcement..." className={errors.subject ? 'error' : ''} />
+                  {errors.subject && <span className="error-message">{errors.subject}</span>}
+                </div>
 
+                <div className="form-group">
+                  <label className="required">Message Body</label>
+                  <textarea name="message" value={formData.message} onChange={handleChange} rows="5" placeholder="Write your full announcement here..." className={errors.message ? 'error' : ''}></textarea>
+                  {errors.message && <span className="error-message">{errors.message}</span>}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* STEP 3: LIFECYCLE */}
+          {step === 3 && (
+            <div className="form-section">
+              <h3 className="section-title">Delivery & Lifecycle</h3>
+              
+              <div className="form-grid" style={{ gridTemplateColumns: '1fr' }}>
+                <div className="form-group">
+                  <label className="required">Delivery Schedule</label>
+                  <div className="select-wrapper">
+                    <select name="scheduleType" value={formData.scheduleType} onChange={handleChange}>
+                      <option value="now">Dispatch Immediately</option>
+                      <option value="schedule">Schedule for Later</option>
+                    </select>
+                    <ChevronDown size={18} className="select-arrow" />
+                  </div>
+                </div>
+
+                {formData.scheduleType === 'schedule' && (
+                  <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', padding: '1rem', background: 'var(--bg-surface-alt)', borderRadius: '8px' }}>
+                    <div className="form-group">
+                      <label className="required">Date</label>
+                      <input type="date" name="scheduleDate" value={formData.scheduleDate} onChange={handleChange} className={errors.scheduleDate ? 'error' : ''} />
+                    </div>
+                    <div className="form-group">
+                      <label className="required">Time</label>
+                      <input type="time" name="scheduleTime" value={formData.scheduleTime} onChange={handleChange} className={errors.scheduleTime ? 'error' : ''} />
+                    </div>
+                  </div>
+                )}
+
+                <div className="form-group" style={{ marginTop: '1rem' }}>
+                  <label>Automatic Expiry (Optional)</label>
+                  <input type="date" name="expiryDate" value={formData.expiryDate} onChange={handleChange} />
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>Notification will automatically disappear from user inboxes after this date.</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="modal-footer">
-          <button className="btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="btn-reset" onClick={handleReset}>Reset</button>
-          <button className="btn-save" onClick={handleSave}><Send size={18} /> Send Notification</button>
+        <div className="modal-footer" style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <button type="button" className="btn-secondary" onClick={step === 1 ? onClose : prevStep}>
+            {step === 1 ? 'Cancel' : 'Back'}
+          </button>
+          
+          {step < 3 ? (
+            <button type="button" className="btn-primary" onClick={nextStep}>
+              Next Step
+            </button>
+          ) : (
+            <button type="button" className="btn-primary" onClick={handleDispatch} style={{ background: 'var(--color-primary)' }}>
+              <Send size={18} /> {formData.scheduleType === 'schedule' ? 'Schedule Broadcast' : 'Dispatch Now'}
+            </button>
+          )}
         </div>
 
       </div>

@@ -1,90 +1,105 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Eye, Pencil, Trash2, Search, Filter, Download, Send, Printer } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Eye, Pencil, Trash2, Search, Download, Send, Printer } from 'lucide-react';
 import StudentLayout from '../../components/student/StudentLayout';
 import '../college/PreceptorManagement.css';
-import { MOCK_CASES } from '../../data/mockData';
-import ViewRecordModal from '../../components/college/shared/ViewRecordModal';
-import ConfirmDeleteModal from '../../components/college/shared/ConfirmDeleteModal';
+import { useAuth } from '../../context/AuthContext';
+import { useDatabase } from '../../context/DatabaseContext';
+
+const getStatusClass = (status) => {
+  switch (status) {
+    case 'Approved': return 'status-active';
+    case 'Under Review':
+    case 'Submitted': return 'status-pending';
+    case 'Returned': return 'status-returned';
+    case 'Draft': return 'status-inactive';
+    default: return 'status-inactive';
+  }
+};
+
+const getFormsSubmittedText = (status) => {
+  if (status === 'Approved' || status === 'Under Review' || status === 'Submitted') return '5/5 Forms';
+  if (status === 'Returned') return '4/5 Forms';
+  return '1/5 Forms';
+};
+
+const formatSubmissionDate = (dateVal) => {
+  if (!dateVal) return 'Not Available';
+  const d = new Date(dateVal);
+  if (isNaN(d.getTime())) return 'Not Available';
+  
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+};
 
 const StudentCaseLibrary = () => {
+  const { currentUser } = useAuth();
+  const { cases } = useDatabase();
+  const navigate = useNavigate();
+  
   const [searchTerm, setSearchTerm] = useState('');
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedCase, setSelectedCase] = useState(null);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [caseToDelete, setCaseToDelete] = useState(null);
+  
+  // Normalize mock case statuses to match requirements
+  const studentCases = cases.map(c => {
+    let normalizedStatus = c.status;
+    if (normalizedStatus === 'Pending') normalizedStatus = 'Under Review';
+    return { ...c, status: normalizedStatus };
+  }).filter(c => c.studentId === currentUser?.id || true); // Mock fallback
 
-  // Use mock data and filter appropriately
-  const filteredCases = MOCK_CASES.filter(c => 
-    c.status === 'Approved' && 
-    (c.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-     c.patientName.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const casesToDisplay = studentCases.filter(c => {
+    const searchLower = searchTerm.toLowerCase();
+    return c.id.toLowerCase().includes(searchLower) || (c.diagnosis && c.diagnosis.toLowerCase().includes(searchLower));
+  });
 
   const handleSearch = (e) => setSearchTerm(e.target.value);
 
-  const handleView = (c) => {
-    setSelectedCase(c);
-    setIsViewModalOpen(true);
+  const handleView = (c) => navigate(`/student/cases/view/${c.id}`);
+  const handleEdit = (c) => navigate(`/student/cases/edit/${c.id}`);
+  
+  const handleDelete = (c) => {
+    if(window.confirm(`Are you sure you want to delete Case ID: ${c.id}?`)) {
+      alert('Case deleted successfully (Mock).');
+    }
   };
 
-  const handleDeleteClick = (c) => {
-    setCaseToDelete(c);
-    setIsDeleteModalOpen(true);
+  const handleResubmit = (c) => {
+    alert(`Resubmitting Case ID: ${c.id} to preceptor...`);
   };
 
-  const handleConfirmDelete = () => {
-    console.log('Deleted case:', caseToDelete);
-    setIsDeleteModalOpen(false);
-    setCaseToDelete(null);
+  const handleDownload = (c) => {
+    alert(`Downloading PDF for Case ID: ${c.id}...`);
   };
 
-  const handleDownload = (c, type) => {
-    // Generate a simple text blob for download simulation
-    const content = `Clinical Case Library - ${type}\n\nCase ID: ${c.id}\nPatient: ${c.patientName}\nDiagnosis: ${c.diagnosis}\nStatus: ${c.status}`;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${c.id}_${type.replace(' ', '_')}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const handlePrint = (c) => {
+    window.print();
   };
 
   return (
     <StudentLayout>
       <div className="preceptor-page">
         <div className="page-header">
-          <h1 className="page-title">Case Library</h1>
-          <div className="breadcrumbs">
-            <Link to="/student/dashboard" className="breadcrumb-link">Dashboard</Link>
-            <span className="breadcrumb-separator">&gt;</span>
-            <Link to="/student/cases" className="breadcrumb-link">Clinical Cases</Link>
-            <span className="breadcrumb-separator">&gt;</span>
-            <span>Case Library</span>
+          <div>
+            <h1 className="page-title">Case Library</h1>
+            <div className="breadcrumbs">
+              <Link to="/student/dashboard" className="breadcrumb-link">Dashboard</Link>
+              <span className="breadcrumb-separator">&gt;</span>
+              <span>Case Library</span>
+            </div>
           </div>
         </div>
 
-        <div className="list-toolbar">
-          <div className="toolbar-left">
-            <div className="search-box">
-              <Search className="search-icon" size={18} />
-              <input 
-                type="text" 
-                placeholder="Search by Case ID or Patient..." 
-                value={searchTerm}
-                onChange={handleSearch}
-              />
-            </div>
-            <button className="btn-filter" style={{ marginLeft: '1rem' }}>
-              <Filter size={16} /> Filter
-            </button>
+        <div className="list-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="search-box" style={{ flex: 1, maxWidth: '400px' }}>
+            <Search className="search-icon" size={18} />
+            <input 
+              type="text" 
+              placeholder="Search by Case ID or Diagnosis..." 
+              value={searchTerm}
+              onChange={handleSearch}
+            />
           </div>
-          <button className="btn-export">
-            <Download size={16} /> Export
-          </button>
         </div>
 
         <div className="table-container">
@@ -92,66 +107,99 @@ const StudentCaseLibrary = () => {
             <thead>
               <tr>
                 <th>Case ID</th>
-                <th>Approval Date</th>
-                <th>Assigned Preceptor</th>
-                <th>Actions</th>
+                <th>Case Title (Final Diagnosis)</th>
+                <th>Submission Date</th>
+                <th>Current Status</th>
+                <th>Forms Submitted</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredCases.length > 0 ? (
-                filteredCases.map((c) => (
+              {casesToDisplay.length > 0 ? (
+                casesToDisplay.map((c) => (
                   <tr key={c.id}>
-                    <td>{c.id}</td>
-                    <td>{c.date || '2023-10-15'}</td>
-                    
-                    
-                    
-                    
-                    <td>{c.preceptor}</td>
                     <td>
-                      <div className="action-buttons">
+                      <button onClick={() => handleView(c)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--color-primary)', fontWeight: 600 }}>
+                        {c.id}
+                      </button>
+                    </td>
+                    <td>{c.diagnosis || 'Untitled Case'}</td>
+                    <td>{formatSubmissionDate(c.submittedDate || c.date)}</td>
+                    <td>
+                      <span className={`status-pill ${getStatusClass(c.status)}`}>
+                        {c.status}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)' }}>
+                        {getFormsSubmittedText(c.status)}
+                      </span>
+                    </td>
+                    <td>
+                      <div className="action-buttons" style={{ justifyContent: 'flex-end' }}>
                         
-                        <button className="btn-icon view" title="View" onClick={() => handleView(c)}>
-                          <Eye size={18} />
-                        </button>
-                        <button className="btn-icon view" title="Download Clinical Case PDF" style={{ color: '#10b981' }} onClick={() => handleDownload(c, 'Clinical Case')}>
-                          <Download size={18} />
-                        </button>
-                        <button className="btn-icon view" title="Download SOAP Note PDF" style={{ color: '#0b57d0' }} onClick={() => handleDownload(c, 'SOAP Note')}>
-                          <Download size={18} />
-                        </button>
-                        <button className="btn-icon edit" title="Print" style={{ color: '#4b5563' }} onClick={() => window.print()}>
-                          <Printer size={18} />
-                        </button>
-  
+                        {c.status === 'Draft' && (
+                          <>
+                            <button className="btn-icon view" title="View" onClick={() => handleView(c)}>
+                              <Eye size={18} />
+                            </button>
+                            <button className="btn-icon edit" title="Edit" onClick={() => handleEdit(c)}>
+                              <Pencil size={18} />
+                            </button>
+                            <button className="btn-icon delete" title="Delete" onClick={() => handleDelete(c)}>
+                              <Trash2 size={18} />
+                            </button>
+                          </>
+                        )}
+
+                        {(c.status === 'Submitted' || c.status === 'Under Review') && (
+                          <button className="btn-icon view" title="View" onClick={() => handleView(c)}>
+                            <Eye size={18} />
+                          </button>
+                        )}
+
+                        {c.status === 'Returned' && (
+                          <>
+                            <button className="btn-icon view" title="View" onClick={() => handleView(c)}>
+                              <Eye size={18} />
+                            </button>
+                            <button className="btn-icon edit" title="Edit" onClick={() => handleEdit(c)}>
+                              <Pencil size={18} />
+                            </button>
+                            <button className="btn-icon view" style={{ color: '#0b57d0' }} title="Resubmit" onClick={() => handleResubmit(c)}>
+                              <Send size={18} />
+                            </button>
+                          </>
+                        )}
+
+                        {c.status === 'Approved' && (
+                          <>
+                            <button className="btn-icon view" title="View" onClick={() => handleView(c)}>
+                              <Eye size={18} />
+                            </button>
+                            <button className="btn-icon view" style={{ color: '#166534' }} title="Download PDF" onClick={() => handleDownload(c)}>
+                              <Download size={18} />
+                            </button>
+                            <button className="btn-icon view" style={{ color: '#4b5563' }} title="Print" onClick={() => handlePrint(c)}>
+                              <Printer size={18} />
+                            </button>
+                          </>
+                        )}
+
                       </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" style={{ textAlign: 'center', padding: '2rem' }}>
-                    No case library found.
+                  <td colSpan="6" className="empty-state">
+                    No clinical cases found matching your criteria.
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
-
-        <ViewRecordModal 
-          isOpen={isViewModalOpen}
-          onClose={() => setIsViewModalOpen(false)}
-          title="Clinical Case Details"
-          data={selectedCase}
-        />
-        
-        <ConfirmDeleteModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          onConfirm={handleConfirmDelete}
-          itemName="draft case"
-        />
       </div>
     </StudentLayout>
   );

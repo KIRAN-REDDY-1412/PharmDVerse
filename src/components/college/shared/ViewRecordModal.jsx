@@ -1,8 +1,8 @@
 import React from 'react';
-import { Eye, X, Printer } from 'lucide-react';
+import { Eye, X, Printer, FileText } from 'lucide-react';
 import '../preceptor/AddPreceptorModal.css';
 
-const ViewRecordModal = ({ isOpen, onClose, title, subtitle, fields = [], icon }) => {
+const ViewRecordModal = ({ isOpen, onClose, title, subtitle, fields = [], icon, onOpenComplete }) => {
   if (!isOpen) return null;
 
   const IconComponent = icon || Eye;
@@ -53,11 +53,22 @@ const ViewRecordModal = ({ isOpen, onClose, title, subtitle, fields = [], icon }
         </div>
 
         {/* Footer */}
-        <div className="modal-footer" style={{ justifyContent: 'flex-end' }}>
-          <button className="btn-cancel" onClick={onClose}>Close</button>
-          <button className="btn-save" onClick={handlePrint} style={{ backgroundColor: 'var(--color-primary)' }}>
-            <Printer size={18} /> Print
-          </button>
+        <div className="modal-footer" style={{ justifyContent: onOpenComplete ? 'space-between' : 'flex-end' }}>
+          {onOpenComplete && (
+            <button 
+              className="btn-save" 
+              onClick={onOpenComplete}
+              style={{ backgroundColor: '#10b981', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <FileText size={18} /> Open Complete Case
+            </button>
+          )}
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button className="btn-cancel" onClick={onClose}>Close</button>
+            <button className="btn-save" onClick={handlePrint} style={{ backgroundColor: 'var(--color-primary)' }}>
+              <Printer size={18} /> Print
+            </button>
+          </div>
         </div>
 
       </div>

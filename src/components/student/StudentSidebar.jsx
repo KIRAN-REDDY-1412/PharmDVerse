@@ -10,7 +10,8 @@ import {
   LogOut, 
   ChevronLeft, 
   ChevronRight, 
-  Stethoscope
+  Stethoscope,
+  HelpCircle
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import '../college/CollegeSidebar.css';
@@ -20,11 +21,11 @@ const MENU_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/student/dashboard' },
   { id: 'cases', label: 'Clinical Cases', icon: ClipboardList, path: '/student/cases' },
   { id: 'library', label: 'Case Library', icon: BookOpen, path: '/student/library' },
-  { id: 'reports', label: 'Reports', icon: BarChart3, path: '/student/reports' },
   { id: 'notifications', label: 'Notifications', icon: Bell, path: '/student/notifications' },
   { type: 'divider', id: 'div-1' },
   { id: 'profile', label: 'My Profile', icon: UserCircle, path: '/student/profile' },
   { id: 'settings', label: 'Settings', icon: Settings, path: '/student/settings' },
+  { id: 'support', label: 'Help & Support', icon: HelpCircle, path: '/student/support' },
 ];
 
 const StudentSidebar = () => {
@@ -77,10 +78,10 @@ const StudentSidebar = () => {
                            (item.id === 'dashboard' && location.pathname === '/student') ||
                            (item.id === 'cases' && location.pathname.startsWith('/student/case')) ||
                            (item.id === 'library' && location.pathname.startsWith('/student/library')) ||
-                           (item.id === 'reports' && location.pathname.startsWith('/student/reports')) ||
-                           (item.id === 'profile' && location.pathname.startsWith('/student/profile')) ||
                            (item.id === 'notifications' && location.pathname.startsWith('/student/notifications')) ||
-                           (item.id === 'settings' && location.pathname.startsWith('/student/settings'));
+                           (item.id === 'profile' && location.pathname.startsWith('/student/profile')) ||
+                           (item.id === 'settings' && location.pathname.startsWith('/student/settings')) ||
+                           (item.id === 'support' && location.pathname.startsWith('/student/support'));
           const Icon = item.icon;
 
           return (
@@ -106,6 +107,9 @@ const StudentSidebar = () => {
         >
           <LogOut className="nav-icon" size={20} />
           <span className="nav-label">Logout</span>
+        </div>
+        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', textAlign: 'center', marginTop: '0.75rem', fontWeight: 600 }}>
+          PharmDVerse ERP v2.1.0
         </div>
       </div>
       
