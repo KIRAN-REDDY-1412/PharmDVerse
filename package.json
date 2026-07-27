@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "server": "node server/src/server.js",
+    "db:seed": "node server/prisma/seed.js",
     "lint": "oxlint",
     "preview": "vite preview"
   },
