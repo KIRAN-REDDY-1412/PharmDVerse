@@ -1,20 +1,42 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, ShieldAlert, Eye, EyeOff, Shield } from 'lucide-react';
-import '../../components/ui/CollegeLoginModal.css'; // Reusing form styles
+import { ArrowLeft, Eye, EyeOff, Shield } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+import '../../components/ui/CollegeLoginModal.css';
 
 const AdminLogin = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Development Mode: Navigate directly to dashboard
-    navigate('/super-admin/dashboard');
+    setErrorMsg('');
+
+    if (!formData.username || !formData.password) {
+      setErrorMsg('Please enter both Email/Username and Password.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await login(formData.username, formData.password);
+      if (res && res.token && (res.user?.role === 'superadmin' || res.user?.role === 'admin')) {
+        navigate('/super-admin/dashboard');
+      } else {
+        setErrorMsg('Invalid Super Admin credentials. Please check your username and password.');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -26,8 +48,6 @@ const AdminLogin = () => {
 
       <div className="login-modal-content card animate-slide-up" style={{ width: '100%', maxWidth: '420px' }}>
         
-
-
         <div className="login-header" style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'rgba(15, 76, 129, 0.1)', color: 'var(--color-primary)', marginBottom: '1rem' }}>
             <Shield size={32} />
@@ -35,6 +55,12 @@ const AdminLogin = () => {
           <h2 className="login-title">Super Admin Login</h2>
           <p className="login-subtitle">PharmDVerse Control Panel</p>
         </div>
+
+        {errorMsg && (
+          <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1.25rem', fontSize: '0.875rem', fontWeight: 500 }}>
+            {errorMsg}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
@@ -45,6 +71,7 @@ const AdminLogin = () => {
               value={formData.username}
               onChange={(e) => setFormData({...formData, username: e.target.value})}
               placeholder="admin@pharmdverse.com" 
+              required
             />
           </div>
 
@@ -58,6 +85,7 @@ const AdminLogin = () => {
                 onChange={(e) => setFormData({...formData, password: e.target.value})}
                 placeholder="••••••••" 
                 style={{ paddingRight: '2.5rem' }}
+                required
               />
               <button 
                 type="button" 
@@ -69,16 +97,8 @@ const AdminLogin = () => {
             </div>
           </div>
 
-          <div className="login-options">
-            <label className="remember-me">
-              <input type="checkbox" />
-              <span>Remember me</span>
-            </label>
-            <a href="/coming-soon" className="forgot-password">Forgot Password?</a>
-          </div>
-
-          <button type="submit" className="btn btn-primary w-full" style={{ padding: '0.875rem' }}>
-            Login to Admin Portal
+          <button type="submit" className="btn btn-primary w-full" disabled={loading} style={{ padding: '0.875rem', marginTop: '1rem' }}>
+            {loading ? 'Authenticating...' : 'Sign In to Dashboard'}
           </button>
         </form>
       </div>

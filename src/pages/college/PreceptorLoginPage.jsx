@@ -1,52 +1,41 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, ShieldAlert } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useDatabase } from '../../context/DatabaseContext';
 import '../../components/ui/CollegeLoginModal.css';
 
 const PreceptorLoginPage = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [errorMsg, setErrorMsg] = useState('');
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    username: '',
+    email: '',
     password: ''
   });
 
-  const { login } = useAuth();
-  const { users } = useDatabase();
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const IS_DEV_MODE = true;
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    
-    if (IS_DEV_MODE) {
-      console.log('Development Mode: Bypassing authentication validation.');
-      const defaultPreceptor = users.find(u => u.role === 'preceptor' && u.status !== 'Inactive');
-      if (defaultPreceptor) {
-        login(defaultPreceptor);
-        navigate('/preceptor/dashboard');
-        return;
-      }
-    }
-    
-    // Find preceptor by ID and password
-    const preceptor = users.find(u => u.id === formData.username && u.role === 'preceptor' && u.password === formData.password);
-    
-    if (!preceptor) {
-      setErrorMsg('Invalid Employee ID or Password.');
-      return;
-    }
-    
-    if (preceptor.status === 'Inactive') {
-      setErrorMsg('Your account is currently Inactive. Please contact the College Administrator.');
+
+    if (!formData.email || !formData.password) {
+      setErrorMsg('Please enter both Email and Password.');
       return;
     }
 
-    login(preceptor);
-    navigate('/preceptor/dashboard');
+    setLoading(true);
+    try {
+      const res = await login(formData.email, formData.password);
+      if (res && res.token && (res.user?.role === 'preceptor' || res.user?.role === 'superadmin')) {
+        navigate('/preceptor/dashboard');
+      } else {
+        setErrorMsg('Invalid Preceptor credentials.');
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -58,28 +47,27 @@ const PreceptorLoginPage = () => {
 
       <div className="login-modal-content card animate-slide-up" style={{ width: '100%', maxWidth: '450px' }}>
         
-
-
         <div className="login-header">
           <h2 className="login-title">Preceptor Login</h2>
-          <p className="login-subtitle">Access your PRECEPTOR PORTAL.</p>
+          <p className="login-subtitle">Access student evaluations & clinical reviews.</p>
         </div>
 
         {errorMsg && (
-          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fecaca', borderRadius: '6px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.85rem', color: '#991b1b', fontWeight: 500 }}>
+          <div style={{ backgroundColor: '#fee2e2', color: '#b91c1c', padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1.25rem', fontSize: '0.875rem', fontWeight: 500 }}>
             {errorMsg}
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">Employee ID / Username</label>
+            <label htmlFor="email">Preceptor Email</label>
             <input 
-              type="text" 
-              id="username" 
-              value={formData.username}
-              onChange={(e) => setFormData({...formData, username: e.target.value})}
-              placeholder="e.g. PRE001" 
+              type="email" 
+              id="email" 
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+              placeholder="e.roberts@bhc.edu" 
+              required
             />
           </div>
 
@@ -91,19 +79,12 @@ const PreceptorLoginPage = () => {
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
               placeholder="••••••••" 
+              required
             />
           </div>
 
-          <div className="login-options">
-            <label className="remember-me">
-              <input type="checkbox" />
-              <span>Remember me</span>
-            </label>
-            <a href="/coming-soon" className="forgot-password">Forgot Password?</a>
-          </div>
-
-          <button type="submit" className="btn btn-primary w-full" style={{ padding: '0.875rem' }}>
-            Login to Dashboard
+          <button type="submit" className="btn btn-primary w-full" disabled={loading} style={{ padding: '0.875rem', marginTop: '1rem' }}>
+            {loading ? 'Logging in...' : 'Sign In to Preceptor Portal'}
           </button>
         </form>
       </div>
