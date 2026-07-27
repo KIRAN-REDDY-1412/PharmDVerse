@@ -1,0 +1,274 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  SUPERADMIN
+  COLLEGE_ADMIN
+  PRECEPTOR
+  STUDENT
+}
+
+enum CollegeStatus {
+  PENDING_APPROVAL
+  APPROVED
+  SUBSCRIPTION_PENDING
+  ACTIVE
+  SUBSCRIPTION_EXPIRED
+  SUSPENDED
+  ARCHIVED
+}
+
+enum CaseStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  RETURNED
+  APPROVED
+}
+
+enum FormStatus {
+  PENDING
+  COMPLETE
+  NEEDS_REVISION
+}
+
+model College {
+  id                    String        @id @default(uuid())
+  slug                  String        @unique
+  name                  String
+  code                  String        @unique
+  domain                String        @unique
+  principalName         String?
+  principalEmail        String?
+  contactMobile         String?
+  address               String?
+  status                CollegeStatus @default(ACTIVE)
+  logoUrl               String?
+  bannerUrl             String?
+  principalPhoto        String?
+  principalMessage      String?
+  aboutContent          String?
+  contactPhone          String?
+  contactEmail          String?
+  footerText            String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  users                 User[]
+  subscriptions         Subscription[]
+  academicYears         AcademicYear[]
+  clinicalCases         ClinicalCase[]
+  landingPage           LandingPage?
+  auditLogs             AuditLog[]
+
+  @@map("colleges")
+}
+
+model Subscription {
+  id                   String   @id @default(uuid())
+  collegeId            String
+  college              College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  plan                 String
+  status               String   @default("Active")
+  startDate            DateTime @default(now())
+  expiryDate           DateTime
+  amount               String
+  maxStudents          Int      @default(1000)
+  maxPreceptors        Int      @default(100)
+  invoiceReference     String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("subscriptions")
+}
+
+model User {
+  id                   String   @id @default(uuid())
+  collegeId            String?
+  college              College? @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  role                 Role
+  email                String   @unique
+  passwordHash         String
+  name                 String
+  phone                String?
+  status               String   @default("Active")
+  avatarUrl            String?
+  designation          String?
+  department           String?
+  qualification        String?
+  course               String?
+  batch                String?
+  academicYear         String?
+  rollNo               String?
+  assignedPreceptorId  String?
+  lastLogin            DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  studentCases         ClinicalCase[] @relation("StudentCases")
+  preceptorCases       ClinicalCase[] @relation("PreceptorCases")
+  sentNotifications    Notification[] @relation("SentNotifications")
+  receivedNotifications Notification[] @relation("ReceivedNotifications")
+  caseReviews          CaseReview[]
+
+  @@map("users")
+}
+
+model AcademicYear {
+  id                   String   @id @default(uuid())
+  collegeId            String
+  college              College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  yearLabel            String   // e.g. "2026-2027"
+  status               String   @default("Active") // Active, Archived
+  startDate            DateTime?
+  endDate              DateTime?
+
+  @@map("academic_years")
+}
+
+model ClinicalCase {
+  id                   String     @id @default(uuid())
+  collegeId            String
+  college              College    @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  studentId            String
+  student              User       @relation("StudentCases", fields: [studentId], references: [id], onDelete: Cascade)
+  preceptorId          String?
+  preceptor            User?      @relation("PreceptorCases", fields: [preceptorId], references: [id], onDelete: SetNull)
+  caseTitle            String
+  patientName          String?
+  patientAge           Int?
+  gender               String?
+  ward                 String?
+  diagnosis            String?
+  overallStatus        CaseStatus @default(DRAFT)
+  submissionDate       DateTime?
+  approvalDate         DateTime?
+  
+  // Section Statuses
+  profileFormStatus    FormStatus @default(PENDING)
+  counsellingStatus    FormStatus @default(PENDING)
+  drugInfoStatus       FormStatus @default(PENDING)
+  interventionStatus   FormStatus @default(PENDING)
+  adrStatus            FormStatus @default(PENDING)
+
+  // Full Clinical Data (JSON)
+  clinicalData         Json?
+
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  caseReviews          CaseReview[]
+  historyEvents        CaseHistory[]
+
+  @@map("clinical_cases")
+}
+
+model CaseReview {
+  id                   String       @id @default(uuid())
+  caseId               String
+  case                 ClinicalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  reviewerId           String
+  reviewer             User         @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+  formKey              String       // patientProfile, patientCounselling, etc.
+  comments             String?
+  rating               Int?
+  status               FormStatus
+  reviewedAt           DateTime     @default(now())
+
+  @@map("case_reviews")
+}
+
+model CaseHistory {
+  id                   String       @id @default(uuid())
+  caseId               String
+  case                 ClinicalCase @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  action               String
+  performedBy          String
+  role                 String
+  timestamp            DateTime     @default(now())
+  details              String?
+
+  @@map("case_history")
+}
+
+model Notification {
+  id                   String   @id @default(uuid())
+  recipientId          String
+  recipient            User     @relation("ReceivedNotifications", fields: [recipientId], references: [id], onDelete: Cascade)
+  senderId             String?
+  sender               User?    @relation("SentNotifications", fields: [senderId], references: [id], onDelete: SetNull)
+  title                String
+  message              String
+  category             String   @default("System Alert")
+  status               String   @default("Unread") // Unread, Read
+  createdAt            DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model LandingPage {
+  id                   String   @id @default(uuid())
+  collegeId            String   @unique
+  college              College  @relation(fields: [collegeId], references: [id], onDelete: Cascade)
+  publishedData        Json?
+  draftData            Json?
+  isPublished          Boolean  @default(true)
+  updatedAt            DateTime @updatedAt
+
+  @@map("landing_pages")
+}
+
+model AuditLog {
+  id                   String   @id @default(uuid())
+  collegeId            String?
+  college              College? @relation(fields: [collegeId], references: [id], onDelete: SetNull)
+  module               String
+  prevValue            Json?
+  updatedValue         Json?
+  modifiedBy           String
+  timestamp            DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model BackupRecord {
+  id                   String   @id @default(uuid())
+  name                 String
+  size                 String
+  createdBy            String
+  type                 String
+  status               String   @default("Completed")
+  scope                String
+  createdAt            DateTime @default(now())
+
+  @@map("backup_records")
+}
+
+model SystemRelease {
+  id                   String   @id @default(uuid())
+  versionNumber        String   @unique
+  releaseDate          String
+  releasedBy           String
+  releaseNotes         String
+  tested               Boolean  @default(false)
+  deploymentStatus     String   @default("Development")
+
+  @@map("system_releases")
+}
+
+model PlatformSetting {
+  id                   String   @id @default("GLOBAL")
+  erpVersion           String   @default("2.1.0")
+  maintenanceMode      Boolean  @default(false)
+  maintenanceMessage   String?
+  autoBackupFrequency  String   @default("Daily (02:00 UTC)")
+  lastBackupTime       DateTime @default(now())
+
+  @@map("platform_settings")
+}
