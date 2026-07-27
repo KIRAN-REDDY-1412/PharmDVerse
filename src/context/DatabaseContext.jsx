@@ -23,79 +23,45 @@ export const useDatabase = () => {
   return useContext(DatabaseContext);
 };
 
+const safeStorageParse = (key, fallback) => {
+  try {
+    if (typeof localStorage === 'undefined') return fallback;
+    const item = localStorage.getItem(key);
+    if (!item || item === 'undefined' || item === 'null') return fallback;
+    return JSON.parse(item);
+  } catch (e) {
+    console.warn(`Error parsing ${key} from localStorage:`, e);
+    return fallback;
+  }
+};
+
 export const DatabaseProvider = ({ children }) => {
   const auth = useAuth() || {};
   const { currentUser } = auth;
 
   // Load from localStorage or use initial seed data
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem('erp_users');
-    return saved ? JSON.parse(saved) : INITIAL_USERS;
-  });
+  const [users, setUsers] = useState(() => safeStorageParse('erp_users', INITIAL_USERS));
 
   const [cases, setCases] = useState(() => {
-    const saved = localStorage.getItem('erp_cases');
-    let parsedCases = saved ? JSON.parse(saved) : INITIAL_CASES;
-    
-    // Migration: If cases exist but lack the new comprehensive nested forms structure, reset to INITIAL_CASES
+    let parsedCases = safeStorageParse('erp_cases', INITIAL_CASES);
     if (parsedCases.length > 0 && (!parsedCases[0].forms || !parsedCases[0].forms.patientProfile.data.patientInformation)) {
       console.warn("Old minimal case structure detected. Migrating to new comprehensive forms structure.");
       parsedCases = INITIAL_CASES;
-      localStorage.setItem('erp_cases', JSON.stringify(INITIAL_CASES));
+      try { localStorage.setItem('erp_cases', JSON.stringify(INITIAL_CASES)); } catch (e) {}
     }
-    
     return parsedCases;
   });
 
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('erp_notifications');
-    return saved ? JSON.parse(saved) : INITIAL_NOTIFICATIONS;
-  });
-
-  const [academicYears, setAcademicYears] = useState(() => {
-    const saved = localStorage.getItem('erp_academic_years');
-    return saved ? JSON.parse(saved) : INITIAL_ACADEMIC_YEARS;
-  });
-
-  const [promotionLogs, setPromotionLogs] = useState(() => {
-    const saved = localStorage.getItem('erp_promotion_logs');
-    return saved ? JSON.parse(saved) : INITIAL_PROMOTION_LOGS;
-  });
-
-  const [auditLogs, setAuditLogs] = useState(() => {
-    const saved = localStorage.getItem('erp_audit_logs');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  const [colleges, setColleges] = useState(() => {
-    const saved = localStorage.getItem('erp_colleges');
-    return saved ? JSON.parse(saved) : INITIAL_COLLEGES;
-  });
-
-  const [registrationRequests, setRegistrationRequests] = useState(() => {
-    const saved = localStorage.getItem('erp_registration_requests');
-    return saved ? JSON.parse(saved) : INITIAL_REGISTRATION_REQUESTS;
-  });
-
-  const [subscriptions, setSubscriptions] = useState(() => {
-    const saved = localStorage.getItem('erp_subscriptions');
-    return saved ? JSON.parse(saved) : INITIAL_SUBSCRIPTIONS;
-  });
-
-  const [rolePermissions, setRolePermissions] = useState(() => {
-    const saved = localStorage.getItem('erp_role_permissions');
-    return saved ? JSON.parse(saved) : INITIAL_ROLE_PERMISSIONS;
-  });
-
-  const [releases, setReleases] = useState(() => {
-    const saved = localStorage.getItem('erp_releases');
-    return saved ? JSON.parse(saved) : INITIAL_RELEASES;
-  });
-
-  const [platformSettings, setPlatformSettings] = useState(() => {
-    const saved = localStorage.getItem('erp_platform_settings');
-    return saved ? JSON.parse(saved) : INITIAL_PLATFORM_SETTINGS;
-  });
+  const [notifications, setNotifications] = useState(() => safeStorageParse('erp_notifications', INITIAL_NOTIFICATIONS));
+  const [academicYears, setAcademicYears] = useState(() => safeStorageParse('erp_academic_years', INITIAL_ACADEMIC_YEARS));
+  const [promotionLogs, setPromotionLogs] = useState(() => safeStorageParse('erp_promotion_logs', INITIAL_PROMOTION_LOGS));
+  const [auditLogs, setAuditLogs] = useState(() => safeStorageParse('erp_audit_logs', []));
+  const [colleges, setColleges] = useState(() => safeStorageParse('erp_colleges', INITIAL_COLLEGES));
+  const [registrationRequests, setRegistrationRequests] = useState(() => safeStorageParse('erp_registration_requests', INITIAL_REGISTRATION_REQUESTS));
+  const [subscriptions, setSubscriptions] = useState(() => safeStorageParse('erp_subscriptions', INITIAL_SUBSCRIPTIONS));
+  const [rolePermissions, setRolePermissions] = useState(() => safeStorageParse('erp_role_permissions', INITIAL_ROLE_PERMISSIONS));
+  const [releases, setReleases] = useState(() => safeStorageParse('erp_releases', INITIAL_RELEASES));
+  const [platformSettings, setPlatformSettings] = useState(() => safeStorageParse('erp_platform_settings', INITIAL_PLATFORM_SETTINGS));
 
   const INITIAL_BACKUPS_SEED = [
     {

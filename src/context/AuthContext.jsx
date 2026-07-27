@@ -11,9 +11,17 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   // Try to load from localStorage first, otherwise default to Student for initial testing
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('erp_currentUser');
-    if (saved) return JSON.parse(saved);
-    return INITIAL_USERS.find(u => u.role === 'student'); 
+    try {
+      if (typeof localStorage !== 'undefined') {
+        const saved = localStorage.getItem('erp_currentUser');
+        if (saved && saved !== 'undefined' && saved !== 'null') {
+          return JSON.parse(saved);
+        }
+      }
+    } catch (e) {
+      console.warn('Error loading erp_currentUser from localStorage:', e);
+    }
+    return INITIAL_USERS.find(u => u.role === 'student') || INITIAL_USERS[0]; 
   });
 
   useEffect(() => {
