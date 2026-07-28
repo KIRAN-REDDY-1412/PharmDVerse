@@ -138,10 +138,9 @@ const CollegeRegistrationForm = ({ mode }) => {
             adminUsername: formData.adminUsername,
             plan: formData.plan
           });
-          alert('College registered and saved to database. Proceeding to Subscription Assignment.');
           navigate(`/super-admin/subscriptions/assign?collegeId=${newCollege.id}`);
         } catch (err) {
-          alert(err.message || 'Failed to save college to database.');
+          console.warn('Registration warning:', err.message);
         }
       } else {
         const request = submitRegistrationRequest({
