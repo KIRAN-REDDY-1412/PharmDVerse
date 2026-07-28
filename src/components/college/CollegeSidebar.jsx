@@ -47,12 +47,7 @@ const CollegeSidebar = () => {
 
   const handleConfirmLogout = () => {
     setIsLogoutModalOpen(false);
-    
-    // Log the action for auditing
-    const logoutTime = new Date().toISOString();
-    console.log(`[Audit] Administrator logged out at ${logoutTime}`);
-    
-    // Replace history to prevent using the back button
+
     navigate('/college-portal', { 
       replace: true,
       state: { message: 'You have been logged out successfully.' }

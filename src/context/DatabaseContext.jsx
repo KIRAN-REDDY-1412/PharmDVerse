@@ -774,15 +774,35 @@ export const DatabaseProvider = ({ children }) => {
   };
 
   // Method B: Register New College Directly (No approval workflow needed)
-  const registerCollegeDirect = (collegeData) => {
+  const registerCollegeDirect = async (collegeData) => {
     const slug = (collegeData.slug || collegeData.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, ''));
+    const code = collegeData.code || collegeData.collegeCode || `${slug}`.toUpperCase().replace(/-/g, '').slice(0, 20);
+
+    let savedCollege = null;
+    try {
+      const res = await ApiService.createCollege({
+        name: collegeData.name,
+        slug,
+        code,
+        domain: collegeData.domain || `${slug}.pharmdverse.com`,
+        principalName: collegeData.adminName || collegeData.principalName,
+        principalEmail: collegeData.adminEmail || collegeData.email,
+        contactMobile: collegeData.adminPhone || collegeData.phone,
+        address: collegeData.address || '',
+      });
+      savedCollege = res.data;
+    } catch (err) {
+      console.error('[DatabaseContext] Failed to save college to Supabase:', err);
+      throw new Error(err.message || 'Failed to save college to database. Is the backend server running?');
+    }
+
     const newCollege = {
-      id: collegeData.id || `COL-${String(colleges.length + 1).padStart(3, '0')}`,
-      name: collegeData.name,
-      slug,
+      id: savedCollege.id,
+      name: savedCollege.name,
+      slug: savedCollege.slug,
       logo: collegeData.logo || collegeData.name.substring(0, 3).toUpperCase(),
-      domain: collegeData.domain || `${slug}.pharmdverse.com`,
-      status: 'pending_subscription',
+      domain: savedCollege.domain,
+      status: (savedCollege.status || 'ACTIVE').toLowerCase(),
       plan: collegeData.plan || 'Standard',
       startDate: '',
       expiryDate: '',
@@ -800,9 +820,9 @@ export const DatabaseProvider = ({ children }) => {
         username: collegeData.adminUsername || `${slug}_admin`,
         status: 'Pending Provisioning'
       },
-      address: collegeData.address || '',
-      email: collegeData.email,
-      phone: collegeData.phone,
+      address: savedCollege.address || collegeData.address || '',
+      email: collegeData.email || savedCollege.contactEmail,
+      phone: collegeData.phone || savedCollege.contactMobile,
       registeredDate: new Date().toISOString().split('T')[0],
       about: collegeData.about || `${collegeData.name} clinical pharmacy portal.`,
       principalMessage: collegeData.principalMessage || `Welcome to ${collegeData.name}.`,

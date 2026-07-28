@@ -40,8 +40,6 @@ const PreceptorSidebar = () => {
 
   const handleConfirmLogout = () => {
     setIsLogoutModalOpen(false);
-    const logoutTime = new Date().toISOString();
-    console.log(`[Audit] Preceptor logged out at ${logoutTime}`);
     navigate('/college-portal', { 
       replace: true,
       state: { message: 'You have been logged out successfully.' }

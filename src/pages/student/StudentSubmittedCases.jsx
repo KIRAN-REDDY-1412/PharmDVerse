@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Eye, Pencil, Trash2, Search, Filter, Download, Send, Printer } from 'lucide-react';
+import { Eye, Search, Filter, Download } from 'lucide-react';
 import StudentLayout from '../../components/student/StudentLayout';
 import '../college/PreceptorManagement.css';
 import { useDatabase } from '../../context/DatabaseContext';
@@ -40,7 +40,6 @@ const StudentSubmittedCases = () => {
   };
 
   const handleConfirmDelete = () => {
-    console.log('Deleted case:', caseToDelete);
     setIsDeleteModalOpen(false);
     setCaseToDelete(null);
   };

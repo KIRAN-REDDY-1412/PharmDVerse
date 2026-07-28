@@ -52,7 +52,8 @@ router.post('/', authenticateToken, async (req, res) => {
 
     res.status(201).json({ success: true, data: created });
   } catch (err) {
-    res.status(500).json({ error: 'Failed to create college' });
+    console.error('[collegeRoutes] POST /colleges failed:', err);
+    res.status(500).json({ error: err.message || 'Failed to create college' });
   }
 });
 

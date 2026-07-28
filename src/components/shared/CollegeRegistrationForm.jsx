@@ -14,7 +14,16 @@ const CollegeRegistrationForm = ({ mode }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitted, setIsSubmitted] = useState(false);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('pharmdverse_college_registration_draft');
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.warn('Failed to load registration draft:', e);
+      }
+    }
+    return {
     // Step 1
     collegeName: '', shortName: '', collegeCode: '', collegeType: 'Private',
     pciApproval: '', affiliation: '', website: '', establishedYear: '',
@@ -30,10 +39,20 @@ const CollegeRegistrationForm = ({ mode }) => {
     plan: 'Professional', subStart: '', subEnd: '', maxStudents: '500', maxPreceptors: '20',
     aiEnabled: true, reportsEnabled: true, libraryEnabled: true,
     filePci: null, fileAffiliation: null, fileAuthLetter: null, declarationChecked: false
+    };
   });
   
   const [errors, setErrors] = useState({});
 
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('pharmdverse_college_registration_draft', JSON.stringify(formData));
+      } catch (e) {
+        console.warn('Failed to save registration draft:', e);
+      }
+    }
+  }, [formData]);
   const STEPS = [
     { id: 1, label: 'College Info', icon: Building2 },
     { id: 2, label: 'Address', icon: MapPin },
@@ -101,26 +120,31 @@ const CollegeRegistrationForm = ({ mode }) => {
     window.scrollTo(0, 0);
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (validateStep(7)) {
       if (mode === 'admin') {
-        const newCollege = registerCollegeDirect({
-          name: formData.collegeName,
-          slug: formData.shortName ? formData.shortName.toLowerCase() : '',
-          email: formData.officialEmail,
-          phone: formData.officialMobile,
-          address: `${formData.address1 || ''}, ${formData.city || ''}, ${formData.state || ''}`,
-          adminName: formData.adminName || formData.principalName,
-          adminEmail: formData.adminEmail || formData.officialEmail,
-          adminPhone: formData.adminMobile || formData.officialMobile,
-          adminUsername: formData.adminUsername,
-          plan: formData.plan
-        });
-        alert('College registered via Method B. Proceeding to Subscription Assignment.');
-        navigate(`/super-admin/subscriptions/assign?collegeId=${newCollege.id}`);
+        try {
+          const newCollege = await registerCollegeDirect({
+            name: formData.collegeName,
+            slug: formData.shortName ? formData.shortName.toLowerCase() : '',
+            code: formData.collegeCode,
+            email: formData.officialEmail,
+            phone: formData.officialMobile,
+            address: `${formData.address1 || ''}, ${formData.city || ''}, ${formData.state || ''}`,
+            adminName: formData.adminName || formData.principalName,
+            adminEmail: formData.adminEmail || formData.officialEmail,
+            adminPhone: formData.adminMobile || formData.officialMobile,
+            adminUsername: formData.adminUsername,
+            plan: formData.plan
+          });
+          alert('College registered and saved to database. Proceeding to Subscription Assignment.');
+          navigate(`/super-admin/subscriptions/assign?collegeId=${newCollege.id}`);
+        } catch (err) {
+          alert(err.message || 'Failed to save college to database.');
+        }
       } else {
-        submitRegistrationRequest({
+        const request = submitRegistrationRequest({
           collegeName: formData.collegeName,
           contactPerson: formData.adminName || formData.principalName || 'College Representative',
           email: formData.officialEmail || formData.adminEmail,
@@ -132,7 +156,11 @@ const CollegeRegistrationForm = ({ mode }) => {
           requestedPlan: formData.plan || 'Professional',
           notes: `Public website registration for ${formData.collegeName}`
         });
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('pharmdverse_college_registration_draft');
+        }
         setIsSubmitted(true);
+        return request;
       }
     }
   };

@@ -40,8 +40,6 @@ const StudentSidebar = () => {
 
   const handleConfirmLogout = () => {
     setIsLogoutModalOpen(false);
-    const logoutTime = new Date().toISOString();
-    console.log(`[Audit] Student logged out at ${logoutTime}`);
     navigate('/college-portal', { 
       replace: true,
       state: { message: 'You have been logged out successfully.' }

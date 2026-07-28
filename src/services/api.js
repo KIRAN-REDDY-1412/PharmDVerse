@@ -2,6 +2,9 @@ const getApiBaseUrl = () => {
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return `${window.location.origin}/api/v1`;
+  }
   return 'http://localhost:5000/api/v1';
 };
 
@@ -36,8 +39,9 @@ class ApiService {
       }
       return await response.json();
     } catch (error) {
-      console.warn(`[API WARNING] Endpoint ${endpoint} unreachable: ${error.message}. Falling back to client state.`);
-      throw error;
+      const message = error.message || 'Unable to reach backend server';
+      console.warn(`[API WARNING] Endpoint ${endpoint} unreachable: ${message}`);
+      throw new Error(`Backend unavailable: ${message}`);
     }
   }
 
@@ -57,6 +61,10 @@ class ApiService {
 
   static getCollegeBySlug(slug) {
     return this.request(`/colleges/by-slug/${slug}`);
+  }
+
+  static createCollege(collegeData) {
+    return this.request('/colleges', { method: 'POST', body: JSON.stringify(collegeData) });
   }
 
   // User Directory APIs
