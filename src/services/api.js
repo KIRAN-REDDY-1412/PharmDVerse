@@ -1,3 +1,5 @@
+import { supabase, isSupabaseConfigured } from './supabaseClient';
+
 const getApiBaseUrl = () => {
   if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
@@ -54,35 +56,145 @@ class ApiService {
     return this.request('/auth/me');
   }
 
-  // College APIs
-  static getColleges() {
+  // College APIs (Supabase + Express)
+  static async getColleges() {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.from('colleges').select('*').order('createdAt', { ascending: false });
+        if (!error && data) {
+          return { success: true, count: data.length, data };
+        }
+      } catch (err) {
+        console.warn('Supabase getColleges error:', err.message);
+      }
+    }
     return this.request('/colleges');
   }
 
-  static getCollegeBySlug(slug) {
-    return this.request(`/colleges/by-slug/${slug}`);
-  }
+  static async createCollege(collegeData) {
+    if (isSupabaseConfigured) {
+      try {
+        const slug = (collegeData.slug || collegeData.name).toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+        const payload = {
+          id: collegeData.id || `COL-${Date.now()}`,
+          name: collegeData.name,
+          slug: slug,
+          code: collegeData.code || slug.toUpperCase().slice(0, 20),
+          domain: collegeData.domain || `${slug}.pharmdverse.com`,
+          principalName: collegeData.principalName || collegeData.adminName,
+          principalEmail: collegeData.principalEmail || collegeData.email,
+          contactMobile: collegeData.contactMobile || collegeData.phone,
+          address: collegeData.address || '',
+          status: 'ACTIVE'
+        };
 
-  static createCollege(collegeData) {
+        const { data, error } = await supabase.from('colleges').insert([payload]).select().single();
+        if (!error && data) {
+          return { success: true, data };
+        }
+      } catch (err) {
+        console.warn('Supabase createCollege error:', err.message);
+      }
+    }
+
     return this.request('/colleges', { method: 'POST', body: JSON.stringify(collegeData) });
   }
 
-  // User Directory APIs
-  static getUsers(params = {}) {
-    const query = new URLSearchParams(params).toString();
-    return this.request(`/users${query ? `?${query}` : ''}`);
+  // User Directory APIs (Supabase + Express)
+  static async getUsers(params = {}) {
+    if (isSupabaseConfigured) {
+      try {
+        let query = supabase.from('users').select('*, colleges(name)').order('createdAt', { ascending: false });
+        if (params.role) {
+          query = query.eq('role', params.role.toUpperCase());
+        }
+        const { data, error } = await query;
+        if (!error && data) {
+          const mapped = data.map(u => ({ ...u, role: u.role.toLowerCase(), collegeName: u.colleges ? u.colleges.name : null }));
+          return { success: true, count: mapped.length, data: mapped };
+        }
+      } catch (err) {
+        console.warn('Supabase getUsers error:', err.message);
+      }
+    }
+    const queryString = new URLSearchParams(params).toString();
+    return this.request(`/users${queryString ? `?${queryString}` : ''}`);
   }
 
-  static createUser(userData) {
+  static async createUser(userData) {
+    if (isSupabaseConfigured) {
+      try {
+        const payload = {
+          id: userData.id || userData.studentId || userData.preceptorId || `USR-${Date.now()}`,
+          name: userData.fullName || userData.name,
+          role: (userData.role || 'student').toUpperCase(),
+          email: userData.email,
+          passwordHash: '$2a$10$w4rYv0...demoHash',
+          phone: userData.mobileNumber || userData.phone,
+          collegeId: userData.collegeId || null,
+          status: userData.status || 'Active',
+          department: userData.department,
+          designation: userData.designation,
+          qualification: userData.qualification,
+          course: userData.course,
+          batch: userData.batch || userData.year,
+          assignedPreceptorId: userData.assignedPreceptorId || userData.preceptorId
+        };
+
+        const { data, error } = await supabase.from('users').insert([payload]).select().single();
+        if (!error && data) {
+          return { success: true, data: { ...data, role: data.role.toLowerCase() } };
+        }
+      } catch (err) {
+        console.warn('Supabase createUser error:', err.message);
+      }
+    }
+
     return this.request('/users', { method: 'POST', body: JSON.stringify(userData) });
   }
 
   // Clinical Case APIs
-  static getCases() {
+  static async getCases() {
+    if (isSupabaseConfigured) {
+      try {
+        const { data, error } = await supabase.from('clinical_cases').select('*').order('updatedAt', { ascending: false });
+        if (!error && data) {
+          return { success: true, count: data.length, data };
+        }
+      } catch (err) {
+        console.warn('Supabase getCases error:', err.message);
+      }
+    }
     return this.request('/cases');
   }
 
-  static createCase(caseData) {
+  static async createCase(caseData) {
+    if (isSupabaseConfigured) {
+      try {
+        const payload = {
+          id: caseData.id || `CAS-26-${Date.now().toString().slice(-4)}`,
+          collegeId: caseData.collegeId || 'COL-001',
+          studentId: caseData.studentId || 'USR-26-441',
+          preceptorId: caseData.preceptorId,
+          caseTitle: caseData.caseTitle || caseData.title || 'New Clinical Case',
+          patientName: caseData.patientName,
+          patientAge: caseData.patientAge ? parseInt(caseData.patientAge, 10) : null,
+          gender: caseData.gender,
+          ward: caseData.ward,
+          diagnosis: caseData.diagnosis,
+          overallStatus: (caseData.status || 'DRAFT').toUpperCase(),
+          clinicalData: caseData.forms || caseData.clinicalData || {}
+        };
+
+        const { data, error } = await supabase.from('clinical_cases').insert([payload]).select().single();
+        if (!error && data) {
+          return { success: true, data };
+        }
+      } catch (err) {
+        console.warn('Supabase createCase error:', err.message);
+      }
+    }
+
     return this.request('/cases', { method: 'POST', body: JSON.stringify(caseData) });
   }
 
@@ -99,8 +211,8 @@ class ApiService {
     return this.request('/platform/backups');
   }
 
-  static createBackup(scopeData) {
-    return this.request('/platform/backups', { method: 'POST', body: JSON.stringify(scopeData) });
+  static createBackup(backupData) {
+    return this.request('/platform/backups', { method: 'POST', body: JSON.stringify(backupData) });
   }
 }
 
