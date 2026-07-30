@@ -36,7 +36,7 @@ const CollegeManagement = () => {
     setModalNotes('');
   };
 
-  const handleModalSubmit = () => {
+  const handleModalSubmit = async () => {
     if (!selectedReq || !modalMode) return;
 
     let actionStatus = 'Pending';
@@ -44,7 +44,7 @@ const CollegeManagement = () => {
     if (modalMode === 'reject') actionStatus = 'Rejected';
     if (modalMode === 'info') actionStatus = 'Info Requested';
 
-    const approvedCollege = reviewRegistrationRequest(selectedReq.id, actionStatus, modalNotes);
+    const approvedCollege = await reviewRegistrationRequest(selectedReq.id, actionStatus, modalNotes);
 
     setModalMode(null);
     setSelectedReq(null);

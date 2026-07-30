@@ -720,56 +720,70 @@ export const DatabaseProvider = ({ children }) => {
   };
 
   // Method A Review: Super Admin Approve / Reject / Request Additional Info
-  const reviewRegistrationRequest = (requestId, status, notes = '') => {
+  const reviewRegistrationRequest = async (requestId, status, notes = '') => {
     let approvedCollege = null;
+    let targetReq = null;
 
     setRegistrationRequests(prev => prev.map(req => {
       if (req.id === requestId) {
-        const updated = { ...req, status, reviewNotes: notes, reviewedDate: new Date().toISOString() };
-        if (status === 'Approved') {
-          // Create candidate college object waiting for subscription
-          const slug = req.collegeName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-          approvedCollege = {
-            id: `COL-${String(colleges.length + 1).padStart(3, '0')}`,
-            name: req.collegeName,
-            slug: slug || `college-${Date.now()}`,
-            logo: req.collegeName.substring(0, 3).toUpperCase(),
-            domain: `${slug || 'college'}.pharmdverse.com`,
-            status: 'pending_subscription',
-            plan: req.requestedPlan || 'Standard',
-            startDate: '',
-            expiryDate: '',
-            renewalDate: '',
-            students: 0,
-            studentsLimit: 500,
-            preceptors: 0,
-            cases: 0,
-            storageUsed: '0 GB',
-            storageLimit: '100 GB',
-            primaryAdmin: {
-              name: req.contactPerson,
-              email: req.email,
-              phone: req.phone,
-              username: `${slug}_admin`,
-              status: 'Pending Provisioning'
-            },
-            address: `${req.city || ''}, ${req.state || ''}, ${req.country || ''}`,
-            email: req.email,
-            phone: req.phone,
-            registeredDate: new Date().toISOString().split('T')[0],
-            about: `${req.collegeName} clinical pharmacy training portal.`,
-            principalMessage: `Welcome to ${req.collegeName}.`,
-            bannerText: `Excellence in Pharmaceutical Care`
-          };
-        }
-        return updated;
+        targetReq = req;
+        return { ...req, status, reviewNotes: notes, reviewedDate: new Date().toISOString() };
       }
       return req;
     }));
 
-    if (approvedCollege) {
+    if (status === 'Approved' && targetReq) {
+      const slug = targetReq.collegeName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+      const collegePayload = {
+        name: targetReq.collegeName,
+        slug: slug || `college-${Date.now()}`,
+        code: (slug || 'COL').toUpperCase().replace(/-/g, '').slice(0, 20),
+        domain: `${slug || 'college'}.pharmdverse.com`,
+        principalName: targetReq.contactPerson,
+        principalEmail: targetReq.email,
+        contactMobile: targetReq.phone,
+        address: `${targetReq.city || ''}, ${targetReq.state || ''}, ${targetReq.country || ''}`
+      };
+
+      try {
+        const res = await ApiService.createCollege(collegePayload);
+        if (res && res.data) {
+          approvedCollege = res.data;
+        }
+      } catch (err) {
+        console.warn('[DatabaseContext] API save warning for approved college:', err.message);
+      }
+
+      if (!approvedCollege) {
+        approvedCollege = {
+          id: `COL-${String(colleges.length + 1).padStart(3, '0')}`,
+          name: targetReq.collegeName,
+          slug: slug || `college-${Date.now()}`,
+          logo: targetReq.collegeName.substring(0, 3).toUpperCase(),
+          domain: `${slug || 'college'}.pharmdverse.com`,
+          status: 'ACTIVE',
+          plan: targetReq.requestedPlan || 'Standard',
+          students: 0,
+          studentsLimit: 500,
+          preceptors: 0,
+          cases: 0,
+          primaryAdmin: {
+            name: targetReq.contactPerson,
+            email: targetReq.email,
+            phone: targetReq.phone,
+            username: `${slug}_admin`,
+            status: 'Pending Provisioning'
+          },
+          address: `${targetReq.city || ''}, ${targetReq.state || ''}, ${targetReq.country || ''}`,
+          email: targetReq.email,
+          phone: targetReq.phone,
+          registeredDate: new Date().toISOString().split('T')[0]
+        };
+      }
+
       setColleges(prev => [approvedCollege, ...prev]);
     }
+
     return approvedCollege;
   };
 
